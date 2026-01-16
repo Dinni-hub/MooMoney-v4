@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, LogOut, Upload, Menu } from 'lucide-react';
 
-// --- CUSTOM HOOK: LOCAL STORAGE SYNC (PENGGANTI FIREBASE) ---
+// --- CUSTOM HOOK: LOCAL STORAGE SYNC ---
 const useLocalStorage = (key, initialValue) => {
   const [storedValue, setStoredValue] = useState(() => {
     try {
@@ -953,7 +953,10 @@ const SapiFinanceApp = () => {
       <div className={`w-full px-4 py-3 md:p-4 shadow-md transition-colors duration-300 ${headerBg} text-white sticky top-0 z-30`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 md:gap-3">
-            <div className="bg-white p-1.5 rounded-full shadow-sm"><span className="text-xl md:text-2xl leading-none">整</span></div>
+            {/* HEADER LOGO: SAPI MINI */}
+            <div className="bg-white p-1 rounded-full shadow-sm overflow-hidden">
+              <CowAvatar mood="happy" className="w-8 h-8 md:w-10 md:h-10" uniqueId="header-logo" />
+            </div>
             <div><h1 className="text-lg md:text-2xl font-bold tracking-wide leading-tight">MooMoney</h1><p className="text-[10px] md:text-xs opacity-90 font-medium">{viewArchiveData ?
             'Arsip Laporan' : headerMonthLabel}</p></div>
           </div>
@@ -1141,8 +1144,12 @@ const SapiFinanceApp = () => {
 
         <div className={`bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-8`}>
            <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors`}>
+            {/* IKON CATATAN PENGELUARAN: FILE TEXT */}
              <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
-              <span className="bg-white/50 p-1 rounded">統</span> <span className="hidden sm:inline">Catatan Pengeluaran</span>
+              <div className="bg-white/50 p-1.5 rounded text-inherit">
+                <FileText size={20} />
+              </div>
+              <span className="hidden sm:inline">Catatan Pengeluaran</span>
               {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
               <span className="inline sm:hidden">Daftar</span>
             </h3>
@@ -1230,8 +1237,9 @@ const SapiFinanceApp = () => {
           </div>
         </div>
         
+        {/* FOOTER: HATI */}
         <div className="text-center mt-8 pb-8 text-gray-400 text-xs md:text-sm">
-           Dibuat dengan 猪 oleh Asisten AI-mu | <span className={`${currentTheme.text}`}>Hemat pangkal kaya!</span>
+           Dibuat dengan 💖 oleh Asisten AI-mu | <span className={`${currentTheme.text}`}>Hemat pangkal kaya!</span>
         </div>
 
       </div>
