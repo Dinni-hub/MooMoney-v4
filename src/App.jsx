@@ -1,48 +1,29 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, LogOut, Upload, Menu } from 'lucide-react';
-import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "firebase/auth";
-import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "firebase/firestore";
 
-// --- FIREBASE INIT ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'moomoney-v1';
+// --- CUSTOM HOOK: LOCAL STORAGE SYNC (PENGGANTI FIREBASE) ---
+const useLocalStorage = (key, initialValue) => {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.error(error);
+      return initialValue;
+    }
+  });
 
-// --- CUSTOM HOOK: FIREBASE SYNC ---
-const useFirestoreSync = (user, fieldName, defaultValue) => {
-  const [value, setValue] = useState(defaultValue);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'finance_v1');
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data[fieldName] !== undefined) {
-          setValue(data[fieldName]);
-        }
-      } else {
-        setDoc(docRef, { [fieldName]: defaultValue }, { merge: true });
-      }
-      setIsLoaded(true);
-    });
-    return () => unsubscribe();
-  }, [user, fieldName]);
-
-  const updateValue = (newValue) => {
-    setValue(newValue);
-    if (user) {
-        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'finance_v1');
-        const valToSave = newValue instanceof Function ? newValue(value) : newValue;
-        setDoc(docRef, { [fieldName]: valToSave }, { merge: true });
+  const setValue = (value) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  return [value, updateValue, isLoaded];
+  return [storedValue, setValue, true];
 };
 
 // --- COMPONENTS ---
@@ -52,7 +33,6 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
   const isWarning = mood === 'warning';
   const isHappy = mood === 'happy'; 
   const isAnnoyed = mood === 'annoyed';
-  
   const skinColor = isAngry ? "#fee2e2" : "#ffffff";
   const muzzleColor = isAngry ? "#fca5a5" : "#fbcfe8"; 
   const hornColor = "#9ca3af";
@@ -77,11 +57,9 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
         {isHappy && <circle cx="100" cy="100" r="90" fill="#dcfce7" className="animate-pulse" />}
         {isAnnoyed && <circle cx="100" cy="100" r="90" fill="#f3f4f6" className="animate-pulse" />}
 
-        {/* Tanduk */}
         <path d="M55 75 Q 40 55 50 45 Q 60 45 70 70 Z" fill={hornColor} stroke="#000" strokeWidth="3" />
         <path d="M145 75 Q 160 55 150 45 Q 140 45 130 70 Z" fill={hornColor} stroke="#000" strokeWidth="3" />
 
-        {/* Telinga */}
         <g>
             <ellipse cx="40" cy="95" rx="25" ry="18" fill={skinColor} stroke="#000" strokeWidth="3" transform="rotate(-20 40 95)"/>
             <g clipPath={`url(#${leftEarId})`}><path d="M20 90 Q 40 100 30 115 L 15 105 Z" fill={spotColor} opacity="0.95" /></g>
@@ -93,7 +71,6 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <ellipse cx="160" cy="95" rx="25" ry="18" fill="none" stroke="#000" strokeWidth="3" transform="rotate(20 160 95)"/>
         </g>
         
-        {/* Wajah */}
         <g clipPath={`url(#${clipId})`}>
             <rect x="50" y="50" width="100" height="100" rx="40" fill={skinColor} />
             <path d="M50 40 Q 80 50 60 70 Q 40 80 30 60 Z" fill={spotColor} opacity="0.95" /> 
@@ -101,12 +78,10 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
         </g>
         <rect x="50" y="50" width="100" height="100" rx="40" fill="none" stroke="#000" strokeWidth="3" />
 
-        {/* Moncong */}
         <ellipse cx="100" cy="125" rx="40" ry="22" fill={muzzleColor} stroke="#000" strokeWidth="3" />
         <circle cx="85" cy="125" r="4" fill={isAngry ? "#ef4444" : "#ec4899"} />
         <circle cx="115" cy="125" r="4" fill={isAngry ? "#ef4444" : "#ec4899"} />
 
-        {/* Mata & Ekspresi */}
         {isAngry ? (
           <>
             <path d="M70 80 L 90 90" stroke="#000" strokeWidth="3" strokeLinecap="round" />
@@ -130,8 +105,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <path d="M70 90 Q 80 80 90 90" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
             <path d="M110 90 Q 120 80 130 90" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
             <path d="M85 135 Q 100 150 115 135" stroke="#000" strokeWidth="2" fill="none" strokeLinecap="round" />
-            {/* Pipi Merona */}
-            <circle cx="65" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
+           <circle cx="65" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
             <circle cx="135" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
            </>
         ) : isAnnoyed ? (
@@ -147,7 +121,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
         ) : (
           <>
             <circle cx="80" cy="85" r="5" fill="#000" />
-            <circle cx="120" cy="85" r="5" fill="#000" />
+             <circle cx="120" cy="85" r="5" fill="#000" />
             <circle cx="78" cy="83" r="2" fill="#fff" />
             <circle cx="118" cy="83" r="2" fill="#fff" />
             <path d="M90 135 Q 100 145 110 135" stroke="#000" strokeWidth="2" fill="none" strokeLinecap="round" />
@@ -185,7 +159,6 @@ const HistoryModal = ({ isOpen, onClose, archives, onLoadArchive, onDeleteArchiv
                     <p className="font-bold text-gray-800">{arch.period}</p>
                     <p className="text-xs text-gray-500">Saldo: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(arch.balance)}</p>
                   </div>
-                  
                   <div className="flex items-center gap-2">
                       <button 
                         onClick={() => onLoadArchive(arch)}
@@ -224,12 +197,12 @@ const ManualMonthChangeModal = ({ isOpen, onClose, onConfirm, newMonthName }) =>
             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500">
                <ArrowRightCircle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Ganti ke {newMonthName}?</h3>
+             <h3 className="text-xl font-bold text-gray-800 mb-2">Ganti ke {newMonthName}?</h3>
             <p className="text-sm text-gray-500 mb-6">
               Kamu memasukkan tanggal di bulan baru. Sistem akan otomatis mengarsipkan data bulan ini ke Riwayat dan memulai lembaran baru untuk <b>{newMonthName}</b>.
             </p>
             <div className="flex gap-2">
-               <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-50">Batal</button>
+              <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-50">Batal</button>
                <button onClick={onConfirm} className="flex-1 py-2 rounded-xl bg-orange-500 font-bold text-white hover:bg-orange-600 shadow-lg">Lanjut</button>
             </div>
          </div>
@@ -249,7 +222,7 @@ const NewMonthModal = ({ isOpen, onClose, onExport, onReset, monthName }) => {
            </h2>
            <p className="text-sm text-gray-600">
              Moo! Sepertinya kita sudah masuk bulan <b>{monthName}</b>.
-             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih! 🐮
+             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih! 整
            </p>
            <div className="mt-4">
              <CowAvatar mood="happy" className="w-24 h-24 mx-auto" uniqueId="new-month-cow" />
@@ -290,12 +263,12 @@ const SummaryModal = ({ isOpen, onClose, totalBudget, totalExpenses, balance, th
         <div className={`p-6 text-center ${isSurplus ? 'bg-green-50' : 'bg-red-50'}`}>
            <h2 className="text-2xl font-bold text-gray-800 mb-2">Laporan Akhir Bulan</h2>
            <p className="text-sm text-gray-500">Ringkasan Keuangan MooMoney</p>
-           <div className="mt-6 mb-4"><CowAvatar mood={isSurplus ? 'happy' : 'angry'} className="w-32 h-32 mx-auto" uniqueId="summary-cow" /></div>
+          <div className="mt-6 mb-4"><CowAvatar mood={isSurplus ? 'happy' : 'angry'} className="w-32 h-32 mx-auto" uniqueId="summary-cow" /></div>
            <p className={`text-lg font-bold ${isSurplus ? 'text-green-600' : 'text-red-600'} mb-6`}>{isSurplus ? "Moo~ Mantap! Kamu Hemat!" : "Moo... Kantong Jebol!"}</p>
         </div>
         <div className="p-6 space-y-4">
            <div className="flex justify-between items-center border-b border-dashed pb-2"><span className="text-gray-500">Total Pemasukan (Budget)</span><span className="font-bold text-gray-800">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalBudget)}</span></div>
-           <div className="flex justify-between items-center border-b border-dashed pb-2"><span className="text-gray-500">Total Pengeluaran</span><span className="font-bold text-red-500">-{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalExpenses)}</span></div>
+            <div className="flex justify-between items-center border-b border-dashed pb-2"><span className="text-gray-500">Total Pengeluaran</span><span className="font-bold text-red-500">-{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalExpenses)}</span></div>
            <div className={`flex justify-between items-center pt-2 text-xl font-bold ${isSurplus ? 'text-green-600' : 'text-red-600'}`}><span>{isSurplus ? 'Sisa Tabungan' : 'Defisit / Hutang'}</span><span>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Math.abs(balance))}</span></div>
         </div>
         <div className="p-6 pt-0"><button onClick={onClose} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 ${theme.bg} ${theme.hover}`}>Tutup Laporan</button></div>
@@ -305,30 +278,9 @@ const SummaryModal = ({ isOpen, onClose, totalBudget, totalExpenses, balance, th
 };
 
 const SapiFinanceApp = () => {
-  // --- AUTH ---
-  const [user, setUser] = useState(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-        setUser(u);
-        setIsAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
   // --- Constants ---
   const INITIAL_CATEGORIES = ['Kebutuhan Bulanan', 'Kebutuhan Mingguan', 'Buah', 'Snack', 'Tagihan', 'Skincare', 'Kesehatan', 'Sedekah', 'Transportasi', 'Lainnya'];
   const CATEGORY_UNITS = { 'Kebutuhan Bulanan': 'pcs', 'Kebutuhan Mingguan': 'pcs/kg', 'Buah': 'kg', 'Snack': 'pcs', 'Tagihan': '-', 'Skincare': 'pcs', 'Kesehatan': 'pcs', 'Sedekah': '-', 'Transportasi': 'kali', 'Lainnya': '-', 'Refill Galon': 'galon', 'Galon': 'galon' };
-  
   const THEMES = {
     pink: { base: 'pink', hex: '#ec4899', name: 'Pink', bg: 'bg-pink-500', bgSoft: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-400', hover: 'hover:bg-pink-600', light: 'bg-pink-100', icon: 'text-pink-400', ring: 'focus:border-pink-500',
       table: { header: ['bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600', 'bg-pink-700', 'bg-pink-800'], cell: ['bg-pink-50', 'bg-pink-100', 'bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600'] }
@@ -349,15 +301,15 @@ const SapiFinanceApp = () => {
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
   const getCurrentMonthISO = () => new Date().toISOString().slice(0, 7);
 
-  // --- STATE (Synced to Firebase) ---
-  const [budget, setBudget] = useFirestoreSync(user, 'budget', 2000000);
-  const [themeKey, setThemeKey] = useFirestoreSync(user, 'theme', 'pink');
-  const [categories, setCategories] = useFirestoreSync(user, 'categories', INITIAL_CATEGORIES);
-  const [visibleBudgetCats, setVisibleBudgetCats] = useFirestoreSync(user, 'visibleBudgets', []);
-  const [lastActiveMonth, setLastActiveMonth, isMonthLoaded] = useFirestoreSync(user, 'lastMonth', getCurrentMonthISO());
-  const [archives, setArchives] = useFirestoreSync(user, 'archives', []);
-  const [categoryBudgets, setCategoryBudgets] = useFirestoreSync(user, 'categoryBudgets', { 'Kebutuhan Bulanan': 0, 'Kebutuhan Mingguan': 0, 'Buah': 0, 'Snack': 0, 'Tagihan': 0, 'Skincare': 0, 'Kesehatan': 0, 'Sedekah': 0, 'Transportasi': 0, 'Lainnya': 0 });
-  const [expenses, setExpenses] = useFirestoreSync(user, 'expenses', [
+  // --- STATE (Synced to LocalStorage via custom hook) ---
+  const [budget, setBudget] = useLocalStorage('moomoney_budget', 2000000);
+  const [themeKey, setThemeKey] = useLocalStorage('moomoney_theme', 'pink');
+  const [categories, setCategories] = useLocalStorage('moomoney_categories', INITIAL_CATEGORIES);
+  const [visibleBudgetCats, setVisibleBudgetCats] = useLocalStorage('moomoney_visibleBudgets', []);
+  const [lastActiveMonth, setLastActiveMonth, isMonthLoaded] = useLocalStorage('moomoney_lastMonth', getCurrentMonthISO());
+  const [archives, setArchives] = useLocalStorage('moomoney_archives', []);
+  const [categoryBudgets, setCategoryBudgets] = useLocalStorage('moomoney_categoryBudgets', { 'Kebutuhan Bulanan': 0, 'Kebutuhan Mingguan': 0, 'Buah': 0, 'Snack': 0, 'Tagihan': 0, 'Skincare': 0, 'Kesehatan': 0, 'Sedekah': 0, 'Transportasi': 0, 'Lainnya': 0 });
+  const [expenses, setExpenses] = useLocalStorage('moomoney_expenses', [
     { id: 1, date: new Date().toISOString().slice(0, 10), item: 'Beli Rumput Premium', category: 'Kebutuhan Bulanan', amount: 50000, qty: 1, unit: 'kg', isCustomCategory: false },
   ]);
 
@@ -369,7 +321,6 @@ const SapiFinanceApp = () => {
   const fileInputRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
   const [showSummary, setShowSummary] = useState(false);
   const [showMonthAlert, setShowMonthAlert] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -386,12 +337,10 @@ const SapiFinanceApp = () => {
   const activeBudget = viewArchiveData ? viewArchiveData.budget : budget;
   const activeExpenses = viewArchiveData ? viewArchiveData.expenses : expenses;
   const activeCategoryBudgets = viewArchiveData ? viewArchiveData.categoryBudgets : categoryBudgets;
-  
   const totalExpenses = activeExpenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
   const balance = activeBudget - totalExpenses;
   const isOverBudget = totalExpenses > activeBudget;
   const currentTheme = THEMES[themeKey] || THEMES.pink;
-
   const expenseByCategory = useMemo(() => {
     const totals = {};
     activeExpenses.forEach(e => {
@@ -401,7 +350,6 @@ const SapiFinanceApp = () => {
     });
     return totals;
   }, [activeExpenses]);
-
   // UPDATE: Logic for "Almost Over" vs "Over"
   const overBudgetCategories = useMemo(() => {
     const catsToCheck = viewArchiveData ? Object.keys(activeCategoryBudgets) : (Array.isArray(visibleBudgetCats) ? visibleBudgetCats : []);
@@ -411,7 +359,6 @@ const SapiFinanceApp = () => {
       return bud > 0 && spent > bud; // Strictly Over
     });
   }, [visibleBudgetCats, activeCategoryBudgets, expenseByCategory, viewArchiveData]);
-
   const almostOverBudgetCategories = useMemo(() => {
     const catsToCheck = viewArchiveData ? Object.keys(activeCategoryBudgets) : (Array.isArray(visibleBudgetCats) ? visibleBudgetCats : []);
     return catsToCheck.filter(cat => {
@@ -420,17 +367,15 @@ const SapiFinanceApp = () => {
       return bud > 0 && spent >= (bud * 0.8) && spent <= bud; // Between 80% and 100%
     });
   }, [visibleBudgetCats, activeCategoryBudgets, expenseByCategory, viewArchiveData]);
-
   const filteredExpenses = useMemo(() => {
     if (!filterCategory) return activeExpenses;
     return activeExpenses.filter(e => e.category === filterCategory);
   }, [activeExpenses, filterCategory]);
-
   // --- EFFECTS ---
   // Fix: Only trigger auto-archive if stored month is strictly in the PAST.
   const hasCheckedRef = useRef(false);
   useEffect(() => {
-    if (!isMonthLoaded || hasCheckedRef.current) return; // Wait for firebase load
+    if (!isMonthLoaded || hasCheckedRef.current) return; 
 
     const currentISO = getCurrentMonthISO();
     if (lastActiveMonth && lastActiveMonth < currentISO && !showMonthAlert && !showManualMonthAlert) {
@@ -438,7 +383,6 @@ const SapiFinanceApp = () => {
     }
     hasCheckedRef.current = true;
   }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded]);
-
   useEffect(() => {
     if (window.XLSX) return;
     const loadScript = (src) => {
@@ -451,13 +395,13 @@ const SapiFinanceApp = () => {
         document.body.appendChild(script);
       });
     };
+   
     Promise.all([
       loadScript("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"),
       loadScript("https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"),
       loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js") // Added for Import
     ]).catch(e => console.error("Failed to load excel libraries", e));
   }, []);
-
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -476,7 +420,6 @@ const SapiFinanceApp = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isMobileMenuOpen]);
-
   // --- MOOD LOGIC ---
   let cowMood = 'normal';
   let cowMessage = 'Moo~ Aman nih !';
@@ -488,7 +431,7 @@ const SapiFinanceApp = () => {
 
   if (isOverBudget) {
     cowMood = 'angry';
-    cowMessage = "Moo!! Boros banget sih ! 💢";
+    cowMessage = "Moo!! Boros banget sih ! 弔";
     appBg = 'bg-red-50';
     headerBg = 'bg-red-500';
     cardBorder = 'border-red-500';
@@ -505,9 +448,9 @@ const SapiFinanceApp = () => {
     appBg = 'bg-yellow-50';
     speechBubbleClass = 'border-yellow-500 text-yellow-700 font-bold';
   } else if (balance < (activeBudget * 0.2) && activeBudget > 0) {
-    cowMood = 'annoyed'; 
+    cowMood = 'annoyed';
     cowMessage = "Moo... Uang Mulai Menipis nih";
-    speechBubbleClass = `${currentTheme.border} ${currentTheme.text} font-extrabold text-lg border-4`; 
+    speechBubbleClass = `${currentTheme.border} ${currentTheme.text} font-extrabold text-lg border-4`;
   }
   
   if (viewArchiveData) {
@@ -560,7 +503,6 @@ const SapiFinanceApp = () => {
     });
     return `conic-gradient(${gradients.join(', ')})`;
   }, [chartData]);
-
   // --- ACTIONS (UPDATE ARCHIVE SUPPORT) ---
 
   const updateArchive = (updatedData) => {
@@ -586,13 +528,13 @@ const SapiFinanceApp = () => {
       const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), select'));
       const index = inputs.indexOf(e.target);
       if (index > -1 && index < inputs.length - 1) {
-        const nextInput = inputs[index + 1]; nextInput.focus(); if (nextInput.type === 'text' || nextInput.type === 'number') nextInput.select();
+        const nextInput = inputs[index + 1];
+        nextInput.focus(); if (nextInput.type === 'text' || nextInput.type === 'number') nextInput.select();
       }
     }
   };
   const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(num);
   const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-
   const guessUnitFromCategory = (catName) => {
     if (!catName) return 'pcs';
     const lowerName = catName.toLowerCase();
@@ -603,20 +545,19 @@ const SapiFinanceApp = () => {
     if (lowerName.includes('pcs') || lowerName.includes('buah')) return 'pcs';
     return 'pcs'; 
   };
-
   const handleCategoryBudgetChange = (cat, value) => { 
-      const cleanValue = value.replace(/\D/g, ''); 
+      const cleanValue = value.replace(/\D/g, '');
       const val = cleanValue ? parseFloat(cleanValue) : 0;
       if (viewArchiveData) {
           const newCatBudgets = { ...viewArchiveData.categoryBudgets, [cat]: val };
           updateArchive({ categoryBudgets: newCatBudgets });
       } else {
-          setCategoryBudgets(prev => ({ ...prev, [cat]: val })); 
+          setCategoryBudgets(prev => ({ ...prev, [cat]: val }));
       }
   };
   
   const handleMainBudgetChange = (value) => { 
-      const cleanValue = value.replace(/\D/g, ''); 
+      const cleanValue = value.replace(/\D/g, '');
       const val = cleanValue ? parseFloat(cleanValue) : 0;
       if (viewArchiveData) {
           updateArchive({ budget: val });
@@ -624,28 +565,28 @@ const SapiFinanceApp = () => {
           setBudget(val); 
       }
   };
-  
   const handleAddCategoryToBudget = (catName) => {
     if (viewArchiveData) {
         const newCatBudgets = { ...viewArchiveData.categoryBudgets, [catName]: 0 };
         updateArchive({ categoryBudgets: newCatBudgets });
     } else {
-        if (!visibleBudgetCats.includes(catName)) { setVisibleBudgetCats([...visibleBudgetCats, catName]); } 
+        if (!visibleBudgetCats.includes(catName)) { setVisibleBudgetCats([...visibleBudgetCats, catName]);
+        } 
     }
     setIsAddingCat(false);
   };
-  
   const handleRemoveCategoryFromBudget = (catName) => { 
       if (viewArchiveData) {
           const newCatBudgets = { ...viewArchiveData.categoryBudgets };
           delete newCatBudgets[catName];
           updateArchive({ categoryBudgets: newCatBudgets });
       } else {
-          setVisibleBudgetCats(visibleBudgetCats.filter(c => c !== catName)); 
+          setVisibleBudgetCats(visibleBudgetCats.filter(c => c !== catName));
       }
   };
   
-  const handleToggleFilter = (cat) => { if (filterCategory === cat) { setFilterCategory(null); } else { setFilterCategory(cat); } };
+  const handleToggleFilter = (cat) => { if (filterCategory === cat) { setFilterCategory(null); } else { setFilterCategory(cat);
+  } };
   
   const handleAddCustomCategory = () => { 
     if (newCatName.trim()) {
@@ -656,26 +597,31 @@ const SapiFinanceApp = () => {
             const newCatBudgets = { ...viewArchiveData.categoryBudgets, [name]: 0 };
             updateArchive({ categoryBudgets: newCatBudgets });
         } else {
-            setVisibleBudgetCats([...visibleBudgetCats, name]); 
+            setVisibleBudgetCats([...visibleBudgetCats, name]);
             setCategoryBudgets(prev => ({ ...prev, [name]: 0 })); 
         }
-        setNewCatName(""); setIsCreatingCustom(false); setIsAddingCat(false); 
+        setNewCatName(""); setIsCreatingCustom(false); setIsAddingCat(false);
     }
   };
 
   const handleChange = (id, field, value) => {
     // Detect Manual Month Switch only if NOT in archive mode
     if (!viewArchiveData && field === 'date' && value) {
-        const inputMonth = value.slice(0, 7); 
+        const inputMonth = value.slice(0, 7);
         if (inputMonth !== lastActiveMonth) {
-            setPendingMonth(inputMonth); setPendingRowId(id); setPendingDateValue(value); setShowManualMonthAlert(true); return;
+            setPendingMonth(inputMonth); setPendingRowId(id); setPendingDateValue(value); setShowManualMonthAlert(true);
+            return;
         }
     }
 
     const updateLogic = (row) => {
        if (row.id === id) {
-        if (field === 'amount') { const cleanValue = value.replace(/\D/g, ''); return { ...row, [field]: cleanValue ? parseFloat(cleanValue) : 0 }; }
-        if (field === 'category') { let unit = CATEGORY_UNITS[value]; if (!unit) { unit = guessUnitFromCategory(value); } return { ...row, [field]: value, unit: unit }; }
+        if (field === 'amount') { const cleanValue = value.replace(/\D/g, '');
+          return { ...row, [field]: cleanValue ? parseFloat(cleanValue) : 0 };
+        }
+        if (field === 'category') { let unit = CATEGORY_UNITS[value];
+          if (!unit) { unit = guessUnitFromCategory(value); } return { ...row, [field]: value, unit: unit };
+        }
         return { ...row, [field]: value };
       }
       return row;
@@ -688,9 +634,8 @@ const SapiFinanceApp = () => {
        setExpenses(expenses.map(updateLogic));
     }
   };
-
   const handleConfirmManualSwitch = () => {
-    const dateObj = new Date(lastActiveMonth + "-01"); 
+    const dateObj = new Date(lastActiveMonth + "-01");
     const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
     const newArchive = {
       id: Date.now(), period: monthLabel, isoDate: lastActiveMonth,
@@ -699,60 +644,62 @@ const SapiFinanceApp = () => {
     };
     setArchives(prev => [newArchive, ...prev]);
     const triggeringRow = expenses.find(e => e.id === pendingRowId) || {};
-    const newRow = { id: 1, date: pendingDateValue, item: triggeringRow.item || '', category: triggeringRow.category || 'Lainnya', amount: triggeringRow.amount || 0, qty: triggeringRow.qty || 1, unit: triggeringRow.unit || '-' };
+    const newRow = { id: 1, date: pendingDateValue, item: triggeringRow.item || '', category: triggeringRow.category || 'Lainnya', amount: triggeringRow.amount ||
+    0, qty: triggeringRow.qty || 1, unit: triggeringRow.unit || '-' };
     setExpenses([newRow]);
     setLastActiveMonth(pendingMonth);
     setShowManualMonthAlert(false); setPendingMonth(null); setPendingRowId(null); setPendingDateValue(null);
   };
-
   const smartParseItem = (id, text) => { 
     if (!text) return; 
-    let newQty = null; let newUnit = null; let newItemName = text; 
+    let newQty = null;
+    let newUnit = null; let newItemName = text; 
     const regexWithUnit = /(.*)\s+(\d+[\.,]?\d*)\s*(kg|g|gr|gram|liter|l|ml|pcs|buah|bks|bungkus|pak|kotak|dus|sak|ons|porsi|mangkok|gelas|cup|btl|botol|lusin|kodi|ikat|butir|galon|ekor)$/i; 
     const regexNumberOnly = /(.*)\s+(\d+[\.,]?\d*)$/; 
-    const matchUnit = text.match(regexWithUnit); 
+    const matchUnit = text.match(regexWithUnit);
     const matchNumber = text.match(regexNumberOnly); 
-    if (matchUnit) { newItemName = matchUnit[1].trim(); newQty = parseFloat(matchUnit[2].replace(',', '.')); newUnit = matchUnit[3].toLowerCase(); } 
-    else if (matchNumber) { newItemName = matchNumber[1].trim(); newQty = parseFloat(matchNumber[2].replace(',', '.')); } 
-    if (!newUnit) { const lowerItem = newItemName.toLowerCase(); if (lowerItem.includes('galon')) newUnit = 'galon'; else if (lowerItem.includes('mi') || lowerItem.includes('nasi')) newUnit = 'porsi'; } 
+    if (matchUnit) { newItemName = matchUnit[1].trim(); newQty = parseFloat(matchUnit[2].replace(',', '.')); newUnit = matchUnit[3].toLowerCase();
+    } 
+    else if (matchNumber) { newItemName = matchNumber[1].trim(); newQty = parseFloat(matchNumber[2].replace(',', '.'));
+    } 
+    if (!newUnit) { const lowerItem = newItemName.toLowerCase(); if (lowerItem.includes('galon')) newUnit = 'galon';
+    else if (lowerItem.includes('mi') || lowerItem.includes('nasi')) newUnit = 'porsi'; } 
     
-    const updateLogic = row => { if (row.id === id) { return { ...row, item: newItemName, qty: newQty !== null ? newQty : row.qty, unit: newUnit !== null ? newUnit : row.unit }; } return row; };
-    
+    const updateLogic = row => { if (row.id === id) { return { ...row, item: newItemName, qty: newQty !== null ?
+    newQty : row.qty, unit: newUnit !== null ? newUnit : row.unit }; } return row; };
     if (viewArchiveData) {
        updateArchive({ expenses: viewArchiveData.expenses.map(updateLogic) });
     } else {
        setExpenses(expenses.map(updateLogic)); 
     }
   };
-  
   const handleAddRow = () => { 
       const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
       const newId = targetList.length > 0 ? Math.max(...targetList.map(e => e.id)) + 1 : 1; 
-      const currentMonthDate = viewArchiveData ? (viewArchiveData.isoDate + "-01") : (lastActiveMonth + "-01"); 
+      const currentMonthDate = viewArchiveData ?
+      (viewArchiveData.isoDate + "-01") : (lastActiveMonth + "-01"); 
       const newRow = { id: newId, date: currentMonthDate, item: '', category: 'Lainnya', amount: 0, qty: 1, unit: '-', isCustomCategory: false };
-      
       if(viewArchiveData) { updateArchive({ expenses: [...targetList, newRow] }); } else { setExpenses([...targetList, newRow]); }
   };
-
   const handleDeleteRow = (id) => { 
-      if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.filter(row => row.id !== id) }); } 
+      if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.filter(row => row.id !== id) });
+      } 
       else { setExpenses(expenses.filter(row => row.id !== id)); } 
   };
-  
   const toggleCategoryMode = (id) => { 
-      const updateLogic = row => { if (row.id === id) { return { ...row, isCustomCategory: !row.isCustomCategory, category: '' }; } return row; };
+      const updateLogic = row => { if (row.id === id) { return { ...row, isCustomCategory: !row.isCustomCategory, category: '' };
+      } return row; };
       if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.map(updateLogic) }); } else { setExpenses(expenses.map(updateLogic)); }
   };
-
-  const handleDeleteArchive = (id) => { setArchives(archives.filter(a => a.id !== id)); if (viewArchiveData && viewArchiveData.id === id) { setViewArchiveData(null); } };
+  const handleDeleteArchive = (id) => { setArchives(archives.filter(a => a.id !== id)); if (viewArchiveData && viewArchiveData.id === id) { setViewArchiveData(null);
+  } };
   const handleLoadArchive = (archivedData) => { setViewArchiveData(archivedData); setShowHistory(false); };
   const handleBackToCurrent = () => { setViewArchiveData(null); };
-
   // --- FIXED LOGIC FOR RESET & KEEP ---
   const handleArchiveAndReset = () => { 
-      const dateObj = new Date(lastActiveMonth + "-01"); 
-      const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }); 
-      const newArchive = { id: Date.now(), period: monthLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance }; 
+      const dateObj = new Date(lastActiveMonth + "-01");
+      const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      const newArchive = { id: Date.now(), period: monthLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance };
       setArchives(prev => [newArchive, ...prev]); 
       setExpenses([]); 
       setLastActiveMonth(getCurrentMonthISO()); 
@@ -760,10 +707,12 @@ const SapiFinanceApp = () => {
   };
   
   const handleResetData = handleArchiveAndReset; 
-  const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
+  const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false);
+  };
 
   const exportToExcel = async () => {
-    if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat..."); return; }
+    if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat...");
+    return; }
     const workbook = new window.ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Laporan');
     const colorHex = currentTheme.hex.replace('#', '');
@@ -774,7 +723,8 @@ const SapiFinanceApp = () => {
     worksheet.mergeCells('A1:G1');
     const title = worksheet.getCell('A1');
     title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : new Date(lastActiveMonth).toLocaleDateString('id-ID', {month:'long', year:'numeric'})}`;
-    title.font = titleFont; title.alignment = { horizontal: 'center' };
+    title.font = titleFont;
+    title.alignment = { horizontal: 'center' };
     worksheet.addRow([]);
     const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]];
     sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; });
@@ -797,7 +747,6 @@ const SapiFinanceApp = () => {
   const handleFileImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (!window.XLSX) {
         alert("Sistem Excel belum siap. Coba lagi sebentar.");
         return;
@@ -811,12 +760,12 @@ const SapiFinanceApp = () => {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         // Read raw data to find headers
-        const dataJson = window.XLSX.utils.sheet_to_json(ws, { header: 1 }); 
-        
+        const dataJson = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
         // Find header row index by looking for known columns
         let headerIndex = -1;
         for(let i=0; i<Math.min(dataJson.length, 20); i++) { // Cek 20 baris pertama
-            const rowStr = dataJson[i] ? dataJson[i].join(' ').toLowerCase() : '';
+            const rowStr = dataJson[i] ?
+            dataJson[i].join(' ').toLowerCase() : '';
             if (rowStr.includes('tanggal') && rowStr.includes('jumlah')) {
                 headerIndex = i;
                 break;
@@ -830,13 +779,11 @@ const SapiFinanceApp = () => {
 
         const headers = dataJson[headerIndex];
         const rows = dataJson.slice(headerIndex + 1);
-        
         const dateIdx = headers.indexOf('Tanggal');
         const itemIdx = headers.indexOf('Deskripsi');
         const qtyIdx = headers.indexOf('Qty');
         const catIdx = headers.indexOf('Kategori');
         const amtIdx = headers.indexOf('Jumlah');
-
         if (dateIdx === -1 || itemIdx === -1 || amtIdx === -1) {
             alert("Kolom penting (Tanggal, Deskripsi, Jumlah) tidak ditemukan.");
             return;
@@ -845,7 +792,6 @@ const SapiFinanceApp = () => {
         // --- SMART IMPORT LOGIC ---
         // 1. Group data by Month
         const groupedExpenses = {};
-        
         rows.forEach((row) => {
             if (!row[dateIdx]) return;
             
@@ -853,7 +799,7 @@ const SapiFinanceApp = () => {
             const rawQtyStr = row[qtyIdx] || "1";
             let qty = 1;
             let unit = '-';
-            
+     
             if (typeof rawQtyStr === 'string') {
                 const qtyMatch = rawQtyStr.match(/^([\d\.,]+)\s*(.*)$/);
                 if (qtyMatch) {
@@ -886,9 +832,9 @@ const SapiFinanceApp = () => {
             
             // Validation
             if (!dateStr || amount <= 0) return;
-
             // --- KEY LOGIC: Group by Month ---
-            const monthKey = dateStr.slice(0, 7); // YYYY-MM
+            const monthKey = dateStr.slice(0, 7);
+            // YYYY-MM
             
             if (!groupedExpenses[monthKey]) {
                 groupedExpenses[monthKey] = [];
@@ -928,7 +874,7 @@ const SapiFinanceApp = () => {
             else {
                 // Find existing archive
                 const existingArchive = archives.find(a => a.isoDate === monthKey);
-                
+            
                 if (existingArchive) {
                     // Update existing archive
                     const updatedExpenses = [...existingArchive.expenses, ...expenseList];
@@ -939,7 +885,6 @@ const SapiFinanceApp = () => {
                         totalExpenses: newTotal,
                         balance: existingArchive.budget - newTotal
                     };
-                    
                     // Update state properly
                     setArchives(prev => prev.map(a => a.id === existingArchive.id ? newArchiveData : a));
                     addedToArchive += expenseList.length;
@@ -960,32 +905,25 @@ const SapiFinanceApp = () => {
                         totalExpenses: totalAmt,
                         balance: 0 - totalAmt
                     };
-                    
                     setArchives(prev => [newArchive, ...prev]);
                     createdArchive += 1;
                 }
             }
         });
-
         alert(`Impor Selesai!\n- Ditambahkan ke Tampilan Ini: ${addedToCurrent} item\n- Ditambahkan ke Arsip Lama: ${addedToArchive} item\n- Arsip Baru Dibuat: ${createdArchive}`);
-
       } catch (err) {
           console.error(err);
-          alert("Gagal membaca file Excel. Pastikan file tidak rusak.");
+        alert("Gagal membaca file Excel. Pastikan file tidak rusak.");
       }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = null; // reset input
+    e.target.value = null;
+    // reset input
   };
 
   useEffect(() => { if (isCreatingCustom && newCatInputRef.current) { newCatInputRef.current.focus(); } }, [isCreatingCustom]);
-
   const activeDateObj = new Date(lastActiveMonth + "-01");
   const headerMonthLabel = activeDateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-
-  if (isAuthLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="text-gray-400 font-bold animate-pulse">Menyiapkan MooMoney...</p></div>;
-  }
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
@@ -1006,8 +944,9 @@ const SapiFinanceApp = () => {
       <div className={`w-full px-4 py-3 md:p-4 shadow-md transition-colors duration-300 ${headerBg} text-white sticky top-0 z-30`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 md:gap-3">
-            <div className="bg-white p-1.5 rounded-full shadow-sm"><span className="text-xl md:text-2xl leading-none">🐮</span></div>
-            <div><h1 className="text-lg md:text-2xl font-bold tracking-wide leading-tight">MooMoney</h1><p className="text-[10px] md:text-xs opacity-90 font-medium">{viewArchiveData ? 'Arsip Laporan' : headerMonthLabel}</p></div>
+            <div className="bg-white p-1.5 rounded-full shadow-sm"><span className="text-xl md:text-2xl leading-none">整</span></div>
+            <div><h1 className="text-lg md:text-2xl font-bold tracking-wide leading-tight">MooMoney</h1><p className="text-[10px] md:text-xs opacity-90 font-medium">{viewArchiveData ?
+            'Arsip Laporan' : headerMonthLabel}</p></div>
           </div>
           
           <div className="flex items-center gap-2">
@@ -1021,10 +960,10 @@ const SapiFinanceApp = () => {
                 <button onClick={handleImportClick} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Import Excel"><Upload size={18} /></button>
             </div>
 
-             {/* Theme & Logout - Desktop */}
+             {/* Theme - Desktop */}
             <div className="hidden md:flex items-center gap-2">
-                {!viewArchiveData && ( <div className="relative"> <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors" title="Tema"> <Palette size={18} /> </button> {showThemeSelector && ( <div className="absolute right-0 top-12 bg-white text-gray-800 rounded-xl shadow-xl p-3 w-40 z-50 animate-in fade-in slide-in-from-top-2 border border-gray-100"> <div className="grid grid-cols-1 gap-1"> {Object.entries(THEMES).map(([key, theme]) => ( <button key={key} onClick={() => { setThemeKey(key); setShowThemeSelector(false); }} className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${themeKey === key ? 'font-bold bg-gray-50' : ''}`}> <div className={`w-4 h-4 rounded-full ${theme.bg}`}></div> {theme.name} </button> ))} </div> </div> )} </div> )}
-                <button onClick={() => signOut(auth)} className="p-2 bg-white/20 rounded-lg hover:bg-red-500/80 transition-colors text-white" title="Keluar"><LogOut size={18}/></button>
+                {!viewArchiveData && ( <div className="relative"> <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors" title="Tema"> <Palette size={18} /> </button> {showThemeSelector && ( <div className="absolute right-0 top-12 bg-white text-gray-800 rounded-xl shadow-xl p-3 w-40 z-50 animate-in fade-in slide-in-from-top-2 border border-gray-100"> <div className="grid grid-cols-1 gap-1"> {Object.entries(THEMES).map(([key, theme]) => ( <button key={key} onClick={() => { setThemeKey(key);
+                setShowThemeSelector(false); }} className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${themeKey === key ? 'font-bold bg-gray-50' : ''}`}> <div className={`w-4 h-4 rounded-full ${theme.bg}`}></div> {theme.name} </button> ))} </div> </div> )} </div> )}
             </div>
 
             {/* Mobile View - Hamburger Menu */}
@@ -1036,30 +975,30 @@ const SapiFinanceApp = () => {
                 {isMobileMenuOpen && (
                     <div className="absolute right-0 top-12 bg-white text-gray-800 rounded-xl shadow-xl p-2 w-48 z-50 border border-gray-100 animate-in fade-in slide-in-from-top-2">
                          <div className="flex flex-col gap-1">
-                            <button onClick={() => { setShowHistory(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><History size={16}/> Riwayat</button>
-                            <button onClick={() => { setShowSummary(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
-                            <button onClick={() => { exportToExcel(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
-                            <button onClick={() => { handleImportClick(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Upload size={16}/> Import Excel</button>
+                            <button onClick={() => { setShowHistory(true);
+                            setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><History size={16}/> Riwayat</button>
+                            <button onClick={() => { setShowSummary(true);
+                            setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
+                            <button onClick={() => { exportToExcel();
+                            setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
+                            <button onClick={() => { handleImportClick();
+                            setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Upload size={16}/> Import Excel</button>
                             
                             {!viewArchiveData && (
                                 <div className="border-t border-gray-100 my-1 pt-1">
                                     <p className="px-3 py-1 text-xs font-bold text-gray-400">Tema</p>
                                     <div className="grid grid-cols-5 gap-1 px-2">
-                                        {Object.entries(THEMES).map(([key, theme]) => (
+                                         {Object.entries(THEMES).map(([key, theme]) => (
                                             <button 
                                                 key={key} 
                                                 onClick={() => { setThemeKey(key); }} 
                                                 className={`w-6 h-6 rounded-full ${theme.bg} border-2 ${themeKey === key ? 'border-gray-600' : 'border-transparent'}`}
                                                 title={theme.name}
-                                            />
+                                             />
                                         ))}
                                     </div>
                                 </div>
                             )}
-
-                            <div className="border-t border-gray-100 my-1 pt-1">
-                                <button onClick={() => signOut(auth)} className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 text-red-600 rounded-lg flex items-center gap-2 font-bold"><LogOut size={16}/> Keluar</button>
-                            </div>
                          </div>
                     </div>
                 )}
@@ -1089,7 +1028,7 @@ const SapiFinanceApp = () => {
               </div>
               
               {/* Chart Always Visible */}
-              <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
+               <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
                   <h3 className="text-gray-600 text-sm font-bold flex items-center gap-2 mb-3"> <PieChart size={16} className="text-indigo-400" /> Statistik Pengeluaran </h3>
                   {totalExpenses > 0 ? (
                   <div className="flex flex-row items-center gap-4 justify-between">
@@ -1099,15 +1038,15 @@ const SapiFinanceApp = () => {
                     <div className="flex-1 overflow-y-auto max-h-32 custom-scrollbar">
                       <div className="grid grid-cols-1 gap-1">
                         {chartData.map((d, i) => (
-                          <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
+                           <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
                             <div className="flex items-center gap-1.5"> <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }}></span> <span className="text-gray-600 truncate max-w-[80px]">{d.name}</span> </div> <span className="font-mono text-gray-500">{d.percentage}%</span>
                           </div>
-                        ))}
+                         ))}
                       </div>
                     </div>
                   </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-gray-400">
+                      <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-gray-400">
                         <div className="w-20 h-20 rounded-full border-4 border-dashed border-gray-200 flex items-center justify-center mb-2">
                             <span className="text-xs font-bold text-gray-300">0%</span>
                         </div>
@@ -1116,7 +1055,7 @@ const SapiFinanceApp = () => {
                   )}
               </div>
             </div>
-            
+             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               <div className={`rounded-2xl shadow-lg p-4 md:p-5 border-l-8 ${isOverBudget ? 'bg-red-50 border-red-500' : 'bg-white border-green-400'}`}>
                  <div className="flex justify-between items-start"> <div> <p className="text-gray-500 text-xs md:text-sm font-semibold">Terpakai</p> <p className={`text-xl md:text-2xl font-bold mt-1 break-all ${isOverBudget ? 'text-red-600' : 'text-gray-800'}`}> {formatRupiah(totalExpenses)} </p> </div> <Calculator className={`w-5 h-5 md:w-6 md:h-6 ${isOverBudget ? 'text-red-300' : 'text-green-300'}`} /> </div>
@@ -1133,6 +1072,7 @@ const SapiFinanceApp = () => {
 
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 mb-8">
           <h3 className={`text-lg font-bold ${currentTheme.text} flex items-center gap-2 mb-4`}> <Wallet size={20} /> Alokasi Budget per Kategori </h3>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {(viewArchiveData ? Object.keys(activeCategoryBudgets) : visibleBudgetCats).map((cat, idx) => {
               if (viewArchiveData && !activeCategoryBudgets[cat] && !expenseByCategory[cat]) return null;
@@ -1165,7 +1105,7 @@ const SapiFinanceApp = () => {
               <div className={`shadow-sm rounded-xl p-3 relative overflow-hidden border border-gray-100 border-l-4 ${currentTheme.border} bg-white flex flex-col justify-center min-h-[100px]`}>
                  {isCreatingCustom ? (
                     <>
-                        <p className="text-xs font-bold text-gray-500 mb-1">Nama Kategori Baru:</p>
+                         <p className="text-xs font-bold text-gray-500 mb-1">Nama Kategori Baru:</p>
                         <div className="flex gap-2 items-center">
                            <input ref={newCatInputRef} type="text" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomCategory(); if (e.key === 'Escape') setIsCreatingCustom(false); }} placeholder="..." className={`w-full border-b-2 ${currentTheme.border} focus:outline-none text-sm py-1 bg-transparent`} />
                            <button onClick={handleAddCustomCategory} className="text-green-500 hover:text-green-700 p-1"><Check size={16} /></button>
@@ -1185,15 +1125,15 @@ const SapiFinanceApp = () => {
                  )}
               </div>
             ) : (
-              <button onClick={() => setIsAddingCat(true)} className="border-2 border-dashed border-gray-300 rounded-xl p-3 flex flex-col items-center justify-center text-gray-400 hover:border-pink-400 hover:text-pink-500 transition-colors min-h-[100px]"> <Plus size={24} /> <span className="text-xs font-bold mt-1">Tambahkan Kategori</span> </button>
+               <button onClick={() => setIsAddingCat(true)} className="border-2 border-dashed border-gray-300 rounded-xl p-3 flex flex-col items-center justify-center text-gray-400 hover:border-pink-400 hover:text-pink-500 transition-colors min-h-[100px]"> <Plus size={24} /> <span className="text-xs font-bold mt-1">Tambahkan Kategori</span> </button>
             ))}
           </div>
         </div>
 
         <div className={`bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-8`}>
            <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors`}>
-            <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
-              <span className="bg-white/50 p-1 rounded">📝</span> <span className="hidden sm:inline">Catatan Pengeluaran</span>
+             <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
+              <span className="bg-white/50 p-1 rounded">統</span> <span className="hidden sm:inline">Catatan Pengeluaran</span>
               {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
               <span className="inline sm:hidden">Daftar</span>
             </h3>
@@ -1208,11 +1148,11 @@ const SapiFinanceApp = () => {
               <thead>
                 <tr className="text-gray-900 text-[10px] md:text-sm uppercase tracking-wider">
                   <th className={`p-1 md:p-4 w-[8%] md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
-                  <th className={`p-1 md:p-4 w-[19%] md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
+                   <th className={`p-1 md:p-4 w-[19%] md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
                   <th className={`p-1 md:p-4 w-[21%] md:w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
                   <th className={`p-1 md:p-4 w-[10%] md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
                   <th className={`p-1 md:p-4 w-[14%] md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
-                  <th className={`p-1 md:p-4 w-[20%] md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
+                   <th className={`p-1 md:p-4 w-[20%] md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
                   <th className={`p-1 md:p-4 w-[8%] md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
                 </tr>
               </thead>
@@ -1220,7 +1160,7 @@ const SapiFinanceApp = () => {
                 {filteredExpenses.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="p-8 text-center text-gray-400 italic text-sm">
-                      {filterCategory ? `Belum ada pengeluaran di kategori ${filterCategory}` : 'Belum ada pengeluaran. Sapi senang! 🐮'}
+                      {filterCategory ? `Belum ada pengeluaran di kategori ${filterCategory}` : 'Belum ada pengeluaran. Sapi senang! 整'}
                     </td>
                   </tr>
                 ) : (
@@ -1232,7 +1172,7 @@ const SapiFinanceApp = () => {
                       </td>
                       <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
                         <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
-                      </td>
+                       </td>
                       <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
                         <div className="flex flex-col items-center gap-0.5">
                           <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
@@ -1240,13 +1180,13 @@ const SapiFinanceApp = () => {
                         </div>
                       </td>
                       <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
-                        <div className="flex gap-1 md:gap-2 items-center">
+                         <div className="flex gap-1 md:gap-2 items-center">
                           {row.isCustomCategory && !viewArchiveData ? (
                              <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
                           ) : (
                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
                                 <option value="">Pilih</option>
-                                {categories.map((cat) => (
+                                 {categories.map((cat) => (
                                   <option key={cat} value={cat}>{cat}</option>
                                 ))}
                              </select>
@@ -1260,7 +1200,7 @@ const SapiFinanceApp = () => {
                         <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
                       </td>
                       <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
-                        <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
+                         <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
                           <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
                         </button>
                       </td>
@@ -1270,19 +1210,19 @@ const SapiFinanceApp = () => {
               </tbody>
               <tfoot className="bg-gray-50 font-bold text-gray-700">
                  <tr>
-                   <td colSpan="5" className="p-1 md:p-4 text-right uppercase text-[10px] md:text-xs tracking-wider text-gray-500">Total</td>
+                    <td colSpan="5" className="p-1 md:p-4 text-right uppercase text-[10px] md:text-xs tracking-wider text-gray-500">Total</td>
                    <td className={`p-1 md:p-4 text-right text-[10px] md:text-lg ${isOverBudget ? 'text-red-600' : currentTheme.text}`}>
                      {formatRupiah(totalExpenses)}
                    </td>
                    <td></td>
                  </tr>
               </tfoot>
-            </table>
+             </table>
           </div>
         </div>
         
         <div className="text-center mt-8 pb-8 text-gray-400 text-xs md:text-sm">
-           Dibuat dengan 💖 oleh Asisten AI-mu | <span className={`${currentTheme.text}`}>Hemat pangkal kaya!</span>
+           Dibuat dengan 猪 oleh Asisten AI-mu | <span className={`${currentTheme.text}`}>Hemat pangkal kaya!</span>
         </div>
 
       </div>
