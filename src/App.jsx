@@ -57,9 +57,11 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
         {isHappy && <circle cx="100" cy="100" r="90" fill="#dcfce7" className="animate-pulse" />}
         {isAnnoyed && <circle cx="100" cy="100" r="90" fill="#f3f4f6" className="animate-pulse" />}
 
+        {/* Tanduk */}
         <path d="M55 75 Q 40 55 50 45 Q 60 45 70 70 Z" fill={hornColor} stroke="#000" strokeWidth="3" />
         <path d="M145 75 Q 160 55 150 45 Q 140 45 130 70 Z" fill={hornColor} stroke="#000" strokeWidth="3" />
 
+        {/* Telinga */}
         <g>
             <ellipse cx="40" cy="95" rx="25" ry="18" fill={skinColor} stroke="#000" strokeWidth="3" transform="rotate(-20 40 95)"/>
             <g clipPath={`url(#${leftEarId})`}><path d="M20 90 Q 40 100 30 115 L 15 105 Z" fill={spotColor} opacity="0.95" /></g>
@@ -71,6 +73,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <ellipse cx="160" cy="95" rx="25" ry="18" fill="none" stroke="#000" strokeWidth="3" transform="rotate(20 160 95)"/>
         </g>
         
+        {/* Wajah */}
         <g clipPath={`url(#${clipId})`}>
             <rect x="50" y="50" width="100" height="100" rx="40" fill={skinColor} />
             <path d="M50 40 Q 80 50 60 70 Q 40 80 30 60 Z" fill={spotColor} opacity="0.95" /> 
@@ -78,10 +81,12 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
         </g>
         <rect x="50" y="50" width="100" height="100" rx="40" fill="none" stroke="#000" strokeWidth="3" />
 
+        {/* Moncong */}
         <ellipse cx="100" cy="125" rx="40" ry="22" fill={muzzleColor} stroke="#000" strokeWidth="3" />
         <circle cx="85" cy="125" r="4" fill={isAngry ? "#ef4444" : "#ec4899"} />
         <circle cx="115" cy="125" r="4" fill={isAngry ? "#ef4444" : "#ec4899"} />
 
+        {/* Mata & Ekspresi */}
         {isAngry ? (
           <>
             <path d="M70 80 L 90 90" stroke="#000" strokeWidth="3" strokeLinecap="round" />
@@ -98,13 +103,17 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="8" fill="#fff" stroke="#000" strokeWidth="2" />
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
-            <path d="M125 60 Q 130 55 125 50 Q 120 55 125 60" fill="#3b82f6" opacity="0.8" />
+            
+            {/* Tetesan Keringat Besar ala Emoji 😅 (UPDATED) */}
+            <path d="M135 75 Q 155 55 135 35 Q 115 55 135 75" fill="#3b82f6" opacity="0.9" />
+            <path d="M130 45 Q 132 42 135 45" stroke="#fff" strokeWidth="2" fill="none" opacity="0.6" />
           </>
         ) : isHappy ? (
            <>
             <path d="M70 90 Q 80 80 90 90" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
             <path d="M110 90 Q 120 80 130 90" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
             <path d="M85 135 Q 100 150 115 135" stroke="#000" strokeWidth="2" fill="none" strokeLinecap="round" />
+            {/* Pipi Merona */}
            <circle cx="65" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
             <circle cx="135" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
            </>
