@@ -104,9 +104,9 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
             
-            {/* Tetesan Keringat Besar ala Emoji 😅 (UPDATED) */}
-            <path d="M135 75 Q 155 55 135 35 Q 115 55 135 75" fill="#3b82f6" opacity="0.9" />
-            <path d="M130 45 Q 132 42 135 45" stroke="#fff" strokeWidth="2" fill="none" opacity="0.6" />
+            {/* 🔥 Tetesan Air (Teardrop) yang Asli 💧 */}
+            <path d="M135 35 C135 35 155 60 155 72 A 20 20 0 1 1 115 72 C 115 60 135 35 135 35 Z" fill="#3b82f6" opacity="0.9" />
+            <path d="M123 65 Q 125 55 130 60" stroke="#fff" strokeWidth="2" fill="none" opacity="0.7" />
           </>
         ) : isHappy ? (
            <>
