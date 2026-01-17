@@ -1195,7 +1195,7 @@ const SapiFinanceApp = () => {
                       ) : (
                          <div className="flex flex-col items-center gap-3">
                            <p>Belum ada pengeluaran. Sapi senang!</p>
-                           {/* Ikon Sapi Happy di Empty State */}
+                           {/* Menggunakan CowAvatar happy sebagai pengganti simbol */}
                            <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                          </div>
                       )}
