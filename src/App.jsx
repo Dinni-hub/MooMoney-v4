@@ -670,13 +670,17 @@ const SapiFinanceApp = () => {
     let newQty = null;
     let newUnit = null; let newItemName = text; 
     const regexWithUnit = /(.*)\s+(\d+[\.,]?\d*)\s*(kg|g|gr|gram|liter|l|ml|pcs|buah|bks|bungkus|pak|kotak|dus|sak|ons|porsi|mangkok|gelas|cup|btl|botol|lusin|kodi|ikat|butir|galon|ekor)$/i; 
-    const regexNumberOnly = /(.*)\s+(\d+[\.,]?\d*)$/; 
+    // const regexNumberOnly = /(.*)\s+(\d+[\.,]?\d*)$/; // DISABLED AGGRESSIVE PARSING
+    
     const matchUnit = text.match(regexWithUnit);
-    const matchNumber = text.match(regexNumberOnly); 
-    if (matchUnit) { newItemName = matchUnit[1].trim(); newQty = parseFloat(matchUnit[2].replace(',', '.')); newUnit = matchUnit[3].toLowerCase();
+    // const matchNumber = text.match(regexNumberOnly); 
+
+    if (matchUnit) { 
+        newItemName = matchUnit[1].trim(); 
+        newQty = parseFloat(matchUnit[2].replace(',', '.')); 
+        newUnit = matchUnit[3].toLowerCase();
     } 
-    else if (matchNumber) { newItemName = matchNumber[1].trim(); newQty = parseFloat(matchNumber[2].replace(',', '.'));
-    } 
+    
     if (!newUnit) { const lowerItem = newItemName.toLowerCase(); if (lowerItem.includes('galon')) newUnit = 'galon';
     else if (lowerItem.includes('mi') || lowerItem.includes('nasi')) newUnit = 'porsi'; } 
     
@@ -1258,7 +1262,8 @@ const SapiFinanceApp = () => {
                                   ))}
                               </select>
                             )}
-                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik sendiri"}>
+                            {/* Tombol Toggle Mode (Pensil / List) */}
+                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik kategori baru"}>
                               {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
                             </button>
                           </div>
