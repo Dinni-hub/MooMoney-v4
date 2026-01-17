@@ -1195,7 +1195,7 @@ const SapiFinanceApp = () => {
                       ) : (
                          <div className="flex flex-col items-center gap-3">
                            <p>Belum ada pengeluaran. Sapi senang!</p>
-                           {/* Menggunakan CowAvatar happy sebagai pengganti simbol */}
+                           {/* Ikon Sapi Happy di Empty State */}
                            <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                          </div>
                       )}
@@ -1251,29 +1251,15 @@ const SapiFinanceApp = () => {
                             {row.isCustomCategory && !viewArchiveData ? (
                               <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
                             ) : (
-                              <select 
-                                value={row.category} 
-                                onChange={(e) => {
-                                    if (e.target.value === 'ADD_NEW_CUSTOM') {
-                                        toggleCategoryMode(row.id);
-                                    } else {
-                                        handleChange(row.id, 'category', e.target.value);
-                                    }
-                                }} 
-                                onKeyDown={handleKeyDown} 
-                                className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}
-                              >
+                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
                                   <option value="">Pilih</option>
                                   {categories.map((cat) => (
                                     <option key={cat} value={cat}>{cat}</option>
                                   ))}
-                                  {/* --- OPSI UNTUK MENAMBAH KATEGORI --- */}
-                                  <option value="ADD_NEW_CUSTOM" className="font-bold text-pink-600 bg-pink-50">+ Buat Kategori Baru...</option>
                               </select>
                             )}
-                            {/* Tombol Plus (+) untuk mode ketik */}
-                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik kategori baru"}>
-                              {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Plus size={14} className="md:w-4 md:h-4" />}
+                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik sendiri"}>
+                              {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
                             </button>
                           </div>
                         </td>
