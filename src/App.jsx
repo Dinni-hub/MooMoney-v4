@@ -688,14 +688,28 @@ const SapiFinanceApp = () => {
        setExpenses(expenses.map(updateLogic)); 
     }
   };
+  
+  // --- MODIFIED ADD ROW LOGIC (ADD TO TOP & AUTO DATE) ---
   const handleAddRow = () => { 
       const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
       const newId = targetList.length > 0 ? Math.max(...targetList.map(e => e.id)) + 1 : 1; 
-      const currentMonthDate = viewArchiveData ?
-      (viewArchiveData.isoDate + "-01") : (lastActiveMonth + "-01"); 
-      const newRow = { id: newId, date: currentMonthDate, item: '', category: 'Lainnya', amount: 0, qty: 1, unit: '-', isCustomCategory: false };
-      if(viewArchiveData) { updateArchive({ expenses: [...targetList, newRow] }); } else { setExpenses([...targetList, newRow]); }
+      
+      // Auto Date: Use Today's date if within active month, or latest date in list
+      const today = new Date().toISOString().slice(0, 10);
+      let defaultDate = today;
+      if (targetList.length > 0) {
+          // Find max date in current list
+          const maxDate = targetList.reduce((max, p) => p.date > max ? p.date : max, targetList[0].date);
+          defaultDate = maxDate; // Use latest date to stay at top
+      }
+
+      const newRow = { id: newId, date: defaultDate, item: '', category: 'Lainnya', amount: 0, qty: 1, unit: '-', isCustomCategory: false };
+      
+      // ADD TO TOP (PREPEND)
+      if(viewArchiveData) { updateArchive({ expenses: [newRow, ...targetList] }); } 
+      else { setExpenses([newRow, ...targetList]); }
   };
+
   const handleDeleteRow = (id) => { 
       if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.filter(row => row.id !== id) });
       } 
@@ -917,7 +931,7 @@ const SapiFinanceApp = () => {
                         budget: 0, // Default 0 budget for new historical import
                         categoryBudgets: { ...categoryBudgets }, // Inherit structure
                         expenses: expenseList,
-                        totalAmt: totalAmt,
+                        totalExpenses: totalAmt,
                         balance: 0 - totalAmt
                     };
                     setArchives(prev => [newArchive, ...prev]);
