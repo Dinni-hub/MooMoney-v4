@@ -231,7 +231,7 @@ const NewMonthModal = ({ isOpen, onClose, onExport, onReset, monthName }) => {
            </h2>
            <p className="text-sm text-gray-600">
              Moo! Sepertinya kita sudah masuk bulan <b>{monthName}</b>.
-             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih! 整
+             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih!
            </p>
            <div className="mt-4">
              <CowAvatar mood="happy" className="w-24 h-24 mx-auto" uniqueId="new-month-cow" />
@@ -688,28 +688,22 @@ const SapiFinanceApp = () => {
        setExpenses(expenses.map(updateLogic)); 
     }
   };
-  
-  // --- MODIFIED ADD ROW LOGIC (ADD TO TOP & AUTO DATE) ---
   const handleAddRow = () => { 
       const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
       const newId = targetList.length > 0 ? Math.max(...targetList.map(e => e.id)) + 1 : 1; 
       
-      // Auto Date: Use Today's date if within active month, or latest date in list
       const today = new Date().toISOString().slice(0, 10);
       let defaultDate = today;
       if (targetList.length > 0) {
-          // Find max date in current list
           const maxDate = targetList.reduce((max, p) => p.date > max ? p.date : max, targetList[0].date);
-          defaultDate = maxDate; // Use latest date to stay at top
+          defaultDate = maxDate; 
       }
 
       const newRow = { id: newId, date: defaultDate, item: '', category: 'Lainnya', amount: 0, qty: 1, unit: '-', isCustomCategory: false };
       
-      // ADD TO TOP (PREPEND)
       if(viewArchiveData) { updateArchive({ expenses: [newRow, ...targetList] }); } 
       else { setExpenses([newRow, ...targetList]); }
   };
-
   const handleDeleteRow = (id) => { 
       if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.filter(row => row.id !== id) });
       } 
@@ -1201,7 +1195,7 @@ const SapiFinanceApp = () => {
                       ) : (
                          <div className="flex flex-col items-center gap-3">
                            <p>Belum ada pengeluaran. Sapi senang!</p>
-                           {/* Menggunakan CowAvatar happy sebagai pengganti simbol */}
+                           {/* Ikon Sapi Happy di Empty State */}
                            <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                          </div>
                       )}
