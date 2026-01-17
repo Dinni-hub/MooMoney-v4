@@ -141,6 +141,74 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
   );
 };
 
+// --- HELPER: SVG PIE CHART ---
+const SvgPieChart = ({ data, size = 120 }) => {
+    if (!data || data.length === 0) return <div className="w-full h-full rounded-full bg-gray-200"></div>;
+
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    let cumulativePercent = 0;
+
+    const getCoordinatesForPercent = (percent) => {
+        const x = Math.cos(2 * Math.PI * percent);
+        const y = Math.sin(2 * Math.PI * percent);
+        return [x, y];
+    };
+
+    return (
+        <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)' }} className="w-full h-full">
+            {data.map((slice, index) => {
+                const start = cumulativePercent;
+                const percent = slice.value / total;
+                cumulativePercent += percent;
+                const end = cumulativePercent;
+
+                const [startX, startY] = getCoordinatesForPercent(start);
+                const [endX, endY] = getCoordinatesForPercent(end);
+                const largeArcFlag = percent > 0.5 ? 1 : 0;
+
+                // Path for the slice
+                const pathData = [
+                    `M 0 0`,
+                    `L ${startX} ${startY}`,
+                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                    `Z`
+                ].join(' ');
+
+                // Calculate text position (centroid of the slice)
+                const textAngle = start + percent / 2;
+                const textRadius = 0.7; // Position text at 70% radius
+                const textX = Math.cos(2 * Math.PI * textAngle) * textRadius;
+                const textY = Math.sin(2 * Math.PI * textAngle) * textRadius;
+
+                // Only show percentage if slice is big enough (>5%)
+                const showText = percent > 0.05;
+
+                return (
+                    <g key={index}>
+                        <path d={pathData} fill={slice.color} stroke="white" strokeWidth="0.02" />
+                        {showText && (
+                            <text
+                                x={textX}
+                                y={textY}
+                                fill="white"
+                                fontSize="0.15" // Relative font size
+                                fontWeight="bold"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                style={{ transform: `rotate(90deg)`, transformOrigin: `${textX}px ${textY}px` }} // Rotate text back to horizontal (hacky in SVG viewbox -1 1)
+                                transform={`rotate(90, ${textX}, ${textY})`}
+                            >
+                                {Math.round(percent * 100)}%
+                            </text>
+                        )}
+                    </g>
+                );
+            })}
+        </svg>
+    );
+};
+
+
 // --- MODALS ---
 
 const HistoryModal = ({ isOpen, onClose, archives, onLoadArchive, onDeleteArchive, currentMonthLabel }) => {
@@ -1063,13 +1131,19 @@ const SapiFinanceApp = () => {
                   {totalExpenses > 0 ? (
                   <div className="flex flex-row items-center gap-4 justify-between">
                     <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
-                      <div className="w-full h-full rounded-full shadow-inner" style={{ background: gradientString, transition: 'background 0.5s ease-in-out' }}></div>
+                      <div className="w-full h-full rounded-full shadow-inner" style={{ background: gradientString, transition: 'background 0.5s ease-in-out' }}>
+                          <SvgPieChart data={chartData} />
+                      </div>
                     </div>
                     <div className="flex-1 overflow-y-auto max-h-32 custom-scrollbar">
                       <div className="grid grid-cols-1 gap-1">
                         {chartData.map((d, i) => (
                            <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
-                            <div className="flex items-center gap-1.5"> <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }}></span> <span className="text-gray-600 truncate max-w-[80px]">{d.name}</span> </div> <span className="font-mono text-gray-500">{d.percentage}%</span>
+                            <div className="flex items-center gap-1.5"> 
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }}></span> 
+                                <span className="text-gray-600 truncate max-w-[80px]">{d.name}</span> 
+                            </div> 
+                            <span className="font-mono text-gray-500 font-bold">{formatRupiah(d.value)}</span>
                           </div>
                          ))}
                       </div>
