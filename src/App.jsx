@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, LogOut, Upload, Menu } from 'lucide-react';
+import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, LogOut, Upload, Menu, Settings } from 'lucide-react';
 
 // --- CUSTOM HOOK: LOCAL STORAGE SYNC ---
 const useLocalStorage = (key, initialValue) => {
@@ -103,8 +103,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="8" fill="#fff" stroke="#000" strokeWidth="2" />
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
-            
-            {/* Tetesan Air Keringat (Kecil & Di Dahi) */}
+            {/* Tetesan Air Keringat */}
             <path d="M135 40 Q 145 55 145 62 A 10 10 0 1 1 125 62 Q 125 55 135 40 Z" fill="#3b82f6" opacity="0.9" />
             <path d="M132 55 Q 133 52 135 55" stroke="#fff" strokeWidth="2" fill="none" opacity="0.7" />
           </>
@@ -141,19 +140,16 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
   );
 };
 
-// --- HELPER: SVG PIE CHART ---
 const SvgPieChart = ({ data, size = 120 }) => {
     if (!data || data.length === 0) return <div className="w-full h-full rounded-full bg-gray-200"></div>;
 
     const total = data.reduce((sum, item) => sum + item.value, 0);
     let cumulativePercent = 0;
-
     const getCoordinatesForPercent = (percent) => {
         const x = Math.cos(2 * Math.PI * percent);
         const y = Math.sin(2 * Math.PI * percent);
         return [x, y];
     };
-
     return (
         <svg viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)' }} className="w-full h-full">
             {data.map((slice, index) => {
@@ -161,46 +157,19 @@ const SvgPieChart = ({ data, size = 120 }) => {
                 const percent = slice.value / total;
                 cumulativePercent += percent;
                 const end = cumulativePercent;
-
                 const [startX, startY] = getCoordinatesForPercent(start);
                 const [endX, endY] = getCoordinatesForPercent(end);
                 const largeArcFlag = percent > 0.5 ? 1 : 0;
-
-                // Path for the slice
-                const pathData = [
-                    `M 0 0`,
-                    `L ${startX} ${startY}`,
-                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-                    `Z`
-                ].join(' ');
-
-                // Calculate text position (centroid of the slice)
+                const pathData = [`M 0 0`, `L ${startX} ${startY}`, `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`, `Z`].join(' ');
                 const textAngle = start + percent / 2;
-                const textRadius = 0.7; // Position text at 70% radius
+                const textRadius = 0.7; 
                 const textX = Math.cos(2 * Math.PI * textAngle) * textRadius;
                 const textY = Math.sin(2 * Math.PI * textAngle) * textRadius;
-
-                // Only show percentage if slice is big enough (>5%)
                 const showText = percent > 0.05;
-
                 return (
                     <g key={index}>
                         <path d={pathData} fill={slice.color} stroke="white" strokeWidth="0.02" />
-                        {showText && (
-                            <text
-                                x={textX}
-                                y={textY}
-                                fill="white"
-                                fontSize="0.15" // Relative font size
-                                fontWeight="bold"
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                style={{ transform: `rotate(90deg)`, transformOrigin: `${textX}px ${textY}px` }} 
-                                transform={`rotate(90, ${textX}, ${textY})`}
-                            >
-                                {Math.round(percent * 100)}%
-                            </text>
-                        )}
+                        {showText && (<text x={textX} y={textY} fill="white" fontSize="0.15" fontWeight="bold" textAnchor="middle" dominantBaseline="middle" transform={`rotate(90, ${textX}, ${textY})`}>{Math.round(percent * 100)}%</text>)}
                     </g>
                 );
             })}
@@ -208,8 +177,37 @@ const SvgPieChart = ({ data, size = 120 }) => {
     );
 };
 
-
 // --- MODALS ---
+
+const SettingsModal = ({ isOpen, onClose, cutoffDay, setCutoffDay }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden relative border-4 border-blue-200">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                         <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Settings size={24} /> Pengaturan</h3>
+                         <button onClick={onClose}><X size={24} className="text-gray-400 hover:text-gray-600" /></button>
+                    </div>
+                    <div className="mb-6">
+                        <label className="block text-sm font-bold text-gray-600 mb-2">Tanggal Mulai Laporan (Gajian)</label>
+                        <p className="text-xs text-gray-400 mb-3">Contoh: Jika gajian tanggal 25, pilih angka 25. Laporan akan dihitung dari tgl 25 sampai tgl 24 bulan depan.</p>
+                        <select 
+                            value={cutoffDay} 
+                            onChange={(e) => setCutoffDay(parseInt(e.target.value))} 
+                            className="w-full p-3 rounded-xl border border-gray-300 font-bold text-lg bg-gray-50 focus:border-blue-500 focus:outline-none"
+                        >
+                            {[...Array(28)].map((_, i) => (
+                                <option key={i+1} value={i+1}>{i+1}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <button onClick={onClose} className="w-full py-3 rounded-xl bg-blue-500 font-bold text-white hover:bg-blue-600 shadow-lg">Simpan</button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 const HistoryModal = ({ isOpen, onClose, archives, onLoadArchive, onDeleteArchive, currentMonthLabel }) => {
   if (!isOpen) return null;
@@ -221,114 +219,28 @@ const HistoryModal = ({ isOpen, onClose, archives, onLoadArchive, onDeleteArchiv
           <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
         </div>
         <div className="p-4 overflow-y-auto flex-1">
-          {archives.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-               <p>Belum ada arsip laporan bulanan.</p>
-            </div>
-          ) : (
+          {archives.length === 0 ? ( <div className="text-center py-8 text-gray-400"><p>Belum ada arsip laporan bulanan.</p></div> ) : (
             <div className="space-y-2">
               {archives.map((arch) => (
-                <div 
-                  key={arch.id}
-                  className="w-full p-2 pl-4 pr-2 rounded-xl border border-gray-100 hover:border-pink-300 hover:bg-pink-50 transition-all flex justify-between items-center group"
-                >
+                <div key={arch.id} className="w-full p-2 pl-4 pr-2 rounded-xl border border-gray-100 hover:border-pink-300 hover:bg-pink-50 transition-all flex justify-between items-center group">
                   <div onClick={() => onLoadArchive(arch)} className="flex-1 text-left cursor-pointer">
                     <p className="font-bold text-gray-800">{arch.period}</p>
                     <p className="text-xs text-gray-500">Saldo: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(arch.balance)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => onLoadArchive(arch)}
-                        className="p-2 text-gray-300 hover:text-pink-500 transition-colors"
-                        title="Lihat & Edit"
-                      >
-                         <ChevronDown className="-rotate-90" size={20} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onDeleteArchive(arch.id); }}
-                        className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                        title="Hapus Arsip"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <button onClick={() => onLoadArchive(arch)} className="p-2 text-gray-300 hover:text-pink-500 transition-colors" title="Lihat & Edit"> <ChevronDown className="-rotate-90" size={20} /> </button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteArchive(arch.id); }} className="p-2 text-gray-300 hover:text-red-500 transition-colors" title="Hapus Arsip"> <Trash2 size={18} /> </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="p-4 bg-gray-50 border-t text-center text-xs text-gray-400">
-           Bulan Aktif: <span className="font-bold text-gray-600">{currentMonthLabel}</span>
-        </div>
+        <div className="p-4 bg-gray-50 border-t text-center text-xs text-gray-400"> Bulan Aktif: <span className="font-bold text-gray-600">{currentMonthLabel}</span> </div>
       </div>
     </div>
   );
 };
-
-const ManualMonthChangeModal = ({ isOpen, onClose, onConfirm, newMonthName }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden relative border-4 border-orange-200">
-         <div className="p-6 text-center">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500">
-               <ArrowRightCircle size={32} />
-            </div>
-             <h3 className="text-xl font-bold text-gray-800 mb-2">Ganti ke {newMonthName}?</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Kamu memasukkan tanggal di bulan baru. Sistem akan otomatis mengarsipkan data bulan ini ke Riwayat dan memulai lembaran baru untuk <b>{newMonthName}</b>.
-            </p>
-            <div className="flex gap-2">
-              <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-50">Batal</button>
-               <button onClick={onConfirm} className="flex-1 py-2 rounded-xl bg-orange-500 font-bold text-white hover:bg-orange-600 shadow-lg">Lanjut</button>
-            </div>
-         </div>
-      </div>
-    </div>
-  );
-}
-
-const NewMonthModal = ({ isOpen, onClose, onExport, onReset, monthName }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-pink-200">
-        <div className="p-6 text-center bg-pink-50">
-           <h2 className="text-2xl font-bold text-pink-600 mb-2 flex items-center justify-center gap-2">
-             <Calendar size={28} /> Bulan Baru!
-           </h2>
-           <p className="text-sm text-gray-600">
-             Moo! Sepertinya kita sudah masuk bulan <b>{monthName}</b>.
-             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih! ✨
-           </p>
-           <div className="mt-4">
-             <CowAvatar mood="happy" className="w-24 h-24 mx-auto" uniqueId="new-month-cow" />
-           </div>
-        </div>
-        <div className="p-6 space-y-3">
-          <button 
-            onClick={onExport} 
-            className="w-full py-3 rounded-xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center gap-2"
-          >
-            <Download size={20} /> Unduh Laporan (Excel)
-          </button>
-          <button 
-            onClick={onReset} 
-            className="w-full py-3 rounded-xl font-bold text-white bg-pink-500 hover:bg-pink-600 shadow-lg"
-          >
-            Reset Data & Mulai Baru (Arsipkan Otomatis)
-          </button>
-          <button 
-            onClick={onClose} 
-            className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600"
-          >
-            Nanti Saja (Tetap di Data Lama)
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const SummaryModal = ({ isOpen, onClose, totalBudget, totalExpenses, balance, theme }) => {
   if (!isOpen) return null;
@@ -378,8 +290,9 @@ const SapiFinanceApp = () => {
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
   const getCurrentMonthISO = () => new Date().toISOString().slice(0, 7);
 
-  // --- STATE (Synced to LocalStorage via custom hook) ---
+  // --- STATE ---
   const [budget, setBudget] = useLocalStorage('moomoney_budget', 2000000);
+  const [cutoffDay, setCutoffDay] = useLocalStorage('moomoney_cutoff', 1); // DEFAULT TANGGAL 1
   const [themeKey, setThemeKey] = useLocalStorage('moomoney_theme', 'pink');
   const [categories, setCategories] = useLocalStorage('moomoney_categories', INITIAL_CATEGORIES);
   const [visibleBudgetCats, setVisibleBudgetCats] = useLocalStorage('moomoney_visibleBudgets', []);
@@ -399,34 +312,67 @@ const SapiFinanceApp = () => {
   const mobileMenuRef = useRef(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [showMonthAlert, setShowMonthAlert] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   
   const [viewArchiveData, setViewArchiveData] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
 
-  const [showManualMonthAlert, setShowManualMonthAlert] = useState(false);
-  const [pendingMonth, setPendingMonth] = useState(null);
-  const [pendingRowId, setPendingRowId] = useState(null);
-  const [pendingDateValue, setPendingDateValue] = useState(null);
+  // --- HELPER: GET CURRENT ACTIVE PERIOD RANGE ---
+  const getActivePeriodRange = () => {
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth(); // 0-11
+      const currentDay = today.getDate();
+
+      let start, end;
+      if (currentDay >= cutoffDay) {
+          // Periode bulan ini (misal 25 Jan - 24 Feb)
+          start = new Date(currentYear, currentMonth, cutoffDay);
+          end = new Date(currentYear, currentMonth + 1, cutoffDay - 1);
+      } else {
+           // Periode bulan lalu (misal 25 Des - 24 Jan)
+          start = new Date(currentYear, currentMonth - 1, cutoffDay);
+          end = new Date(currentYear, currentMonth, cutoffDay - 1);
+      }
+      return { start, end };
+  };
 
   // --- DERIVED ---
   const activeBudget = viewArchiveData ? viewArchiveData.budget : budget;
   const activeExpenses = viewArchiveData ? viewArchiveData.expenses : expenses;
   const activeCategoryBudgets = viewArchiveData ? viewArchiveData.categoryBudgets : categoryBudgets;
-  const totalExpenses = activeExpenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
+  
+  const { start: periodStart, end: periodEnd } = getActivePeriodRange();
+  
+  // Filter Expenses by Active Period
+  const activePeriodExpenses = useMemo(() => {
+    if (viewArchiveData) return viewArchiveData.expenses;
+    return expenses.filter(e => {
+        const d = new Date(e.date);
+        // Reset jam agar perbandingan tanggal akurat
+        const checkDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const pStart = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
+        const pEnd = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate());
+        return checkDate >= pStart && checkDate <= pEnd;
+    });
+  }, [expenses, periodStart, periodEnd, viewArchiveData]);
+
+  const totalExpenses = activePeriodExpenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
   const balance = activeBudget - totalExpenses;
   const isOverBudget = totalExpenses > activeBudget;
   const currentTheme = THEMES[themeKey] || THEMES.pink;
+
   const expenseByCategory = useMemo(() => {
     const totals = {};
-    activeExpenses.forEach(e => {
+    activePeriodExpenses.forEach(e => {
       const amount = parseFloat(e.amount) || 0;
       const cat = e.category || 'Lainnya';
       totals[cat] = (totals[cat] || 0) + amount;
     });
     return totals;
-  }, [activeExpenses]);
+  }, [activePeriodExpenses]);
+
   // UPDATE: Logic for "Almost Over" vs "Over"
   const overBudgetCategories = useMemo(() => {
     const catsToCheck = viewArchiveData ? Object.keys(activeCategoryBudgets) : (Array.isArray(visibleBudgetCats) ? visibleBudgetCats : []);
@@ -436,6 +382,7 @@ const SapiFinanceApp = () => {
       return bud > 0 && spent > bud; // Strictly Over
     });
   }, [visibleBudgetCats, activeCategoryBudgets, expenseByCategory, viewArchiveData]);
+
   const almostOverBudgetCategories = useMemo(() => {
     const catsToCheck = viewArchiveData ? Object.keys(activeCategoryBudgets) : (Array.isArray(visibleBudgetCats) ? visibleBudgetCats : []);
     return catsToCheck.filter(cat => {
@@ -444,28 +391,18 @@ const SapiFinanceApp = () => {
       return bud > 0 && spent >= (bud * 0.8) && spent <= bud; // Between 80% and 100%
     });
   }, [visibleBudgetCats, activeCategoryBudgets, expenseByCategory, viewArchiveData]);
+
   const filteredExpenses = useMemo(() => {
     // 1. FILTER
-    let result = activeExpenses;
+    let result = activePeriodExpenses;
     if (filterCategory) {
-      result = activeExpenses.filter(e => e.category === filterCategory);
+      result = activePeriodExpenses.filter(e => e.category === filterCategory);
     }
     // 2. SORT (Newest Date First) to ensure grouping works
     return [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [activeExpenses, filterCategory]);
+  }, [activePeriodExpenses, filterCategory]);
 
   // --- EFFECTS ---
-  // Fix: Only trigger auto-archive if stored month is strictly in the PAST.
-  const hasCheckedRef = useRef(false);
-  useEffect(() => {
-    if (!isMonthLoaded || hasCheckedRef.current) return; 
-
-    const currentISO = getCurrentMonthISO();
-    if (lastActiveMonth && lastActiveMonth < currentISO && !showMonthAlert && !showManualMonthAlert) {
-      setShowMonthAlert(true);
-    }
-    hasCheckedRef.current = true;
-  }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded]);
   useEffect(() => {
     if (window.XLSX) return;
     const loadScript = (src) => {
@@ -545,7 +482,7 @@ const SapiFinanceApp = () => {
   const chartData = useMemo(() => {
     const data = {};
     let total = 0;
-    activeExpenses.forEach(e => {
+    activePeriodExpenses.forEach(e => {
       const amount = parseFloat(e.amount) || 0;
       if (amount > 0) {
         const cat = e.category || 'Tanpa Kategori';
@@ -572,7 +509,7 @@ const SapiFinanceApp = () => {
             color: `hsl(${baseHue}, 85%, ${l}%)` 
         };
     });
-  }, [activeExpenses, themeKey]);
+  }, [activePeriodExpenses, themeKey]);
 
   const gradientString = useMemo(() => {
     // FIX: Show grey circle if empty to prevent disappearance
@@ -1017,11 +954,13 @@ const SapiFinanceApp = () => {
   };
 
   useEffect(() => { if (isCreatingCustom && newCatInputRef.current) { newCatInputRef.current.focus(); } }, [isCreatingCustom]);
-  const activeDateObj = new Date(lastActiveMonth + "-01");
-  const headerMonthLabel = activeDateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  
+  const { start: periodStart, end: periodEnd } = getActivePeriodRange();
+  const headerMonthLabel = `${periodStart.getDate()} ${periodStart.toLocaleDateString('id-ID', {month:'short'})} - ${periodEnd.getDate()} ${periodEnd.toLocaleDateString('id-ID', {month:'short'})} ${periodEnd.getFullYear()}`;
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} cutoffDay={cutoffDay} setCutoffDay={setCutoffDay} />
       <NewMonthModal isOpen={showMonthAlert} onClose={handleKeepData} onExport={exportToExcel} onReset={handleArchiveAndReset} monthName={new Date().toLocaleDateString('id-ID', { month: 'long' })} />
       <ManualMonthChangeModal isOpen={showManualMonthAlert} onClose={() => setShowManualMonthAlert(false)} onConfirm={handleConfirmManualSwitch} newMonthName={pendingMonth ? new Date(pendingMonth + "-01").toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : ''} />
       <SummaryModal isOpen={showSummary} onClose={() => setShowSummary(false)} totalBudget={activeBudget} totalExpenses={totalExpenses} balance={balance} theme={currentTheme} />
@@ -1044,7 +983,7 @@ const SapiFinanceApp = () => {
               <CowAvatar mood="happy" className="w-8 h-8 md:w-10 md:h-10" uniqueId="header-logo" />
             </div>
             <div><h1 className="text-lg md:text-2xl font-bold tracking-wide leading-tight">MooMoney</h1><p className="text-[10px] md:text-xs opacity-90 font-medium">{viewArchiveData ?
-            'Arsip Laporan' : headerMonthLabel}</p></div>
+            'Arsip Laporan' : `Periode: ${headerMonthLabel}`}</p></div>
           </div>
           
           <div className="flex items-center gap-2">
@@ -1053,6 +992,7 @@ const SapiFinanceApp = () => {
             {/* Desktop View */}
             <div className="hidden md:flex gap-2 mr-2">
                 <button onClick={() => setShowHistory(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Riwayat"><History size={18} /></button>
+                <button onClick={() => setShowSettings(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Pengaturan"><Settings size={18} /></button>
                 <button onClick={() => setShowSummary(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Laporan"><FileText size={18} /></button>
                 <button onClick={exportToExcel} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Excel"><Download size={18} /></button>
                 <button onClick={handleImportClick} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Import Excel"><Upload size={18} /></button>
@@ -1075,6 +1015,8 @@ const SapiFinanceApp = () => {
                          <div className="flex flex-col gap-1">
                             <button onClick={() => { setShowHistory(true);
                             setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><History size={16}/> Riwayat</button>
+                             <button onClick={() => { setShowSettings(true);
+                            setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Settings size={16}/> Pengaturan</button>
                             <button onClick={() => { setShowSummary(true);
                             setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
                             <button onClick={() => { exportToExcel();
