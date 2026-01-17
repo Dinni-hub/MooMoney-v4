@@ -1187,14 +1187,35 @@ const SapiFinanceApp = () => {
                   </tr>
                 ) : (
                   filteredExpenses.map((row, index) => {
-                    const showSpacer = index > 0 && row.date !== filteredExpenses[index - 1].date;
+                    const isNewDateGroup = index === 0 || row.date !== filteredExpenses[index - 1].date;
+                    
+                    // CALCULATE DAILY TOTAL
+                    let dailyTotalElement = null;
+                    if (isNewDateGroup) {
+                        const dailyTotal = filteredExpenses
+                            .filter(e => e.date === row.date)
+                            .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                        
+                        const dateObj = new Date(row.date);
+                        const dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+                        dailyTotalElement = (
+                            <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
+                                <td colSpan="7" className="p-2 md:px-4">
+                                    <div className="flex justify-between items-center text-xs md:text-sm font-bold text-gray-600">
+                                        <span>{dateLabel}</span>
+                                        <span className={`${currentTheme.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
+                                            Total: {formatRupiah(dailyTotal)}
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    }
+
                     return (
                     <React.Fragment key={row.id}>
-                      {showSpacer && (
-                        <tr>
-                          <td colSpan="7" className="h-6 bg-transparent border-none"></td>
-                        </tr>
-                      )}
+                      {dailyTotalElement}
                       <tr className="hover:bg-gray-50 transition-colors group">
                         <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
