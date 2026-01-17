@@ -195,7 +195,7 @@ const SvgPieChart = ({ data, size = 120 }) => {
                                 fontWeight="bold"
                                 textAnchor="middle"
                                 dominantBaseline="middle"
-                                style={{ transform: `rotate(90deg)`, transformOrigin: `${textX}px ${textY}px` }} // Rotate text back to horizontal (hacky in SVG viewbox -1 1)
+                                style={{ transform: `rotate(90deg)`, transformOrigin: `${textX}px ${textY}px` }} 
                                 transform={`rotate(90, ${textX}, ${textY})`}
                             >
                                 {Math.round(percent * 100)}%
@@ -299,7 +299,7 @@ const NewMonthModal = ({ isOpen, onClose, onExport, onReset, monthName }) => {
            </h2>
            <p className="text-sm text-gray-600">
              Moo! Sepertinya kita sudah masuk bulan <b>{monthName}</b>.
-             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih!
+             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih! ✨
            </p>
            <div className="mt-4">
              <CowAvatar mood="happy" className="w-24 h-24 mx-auto" uniqueId="new-month-cow" />
@@ -514,7 +514,7 @@ const SapiFinanceApp = () => {
 
   if (isOverBudget) {
     cowMood = 'angry';
-    cowMessage = "Moo!! Boros banget sih ! 弔";
+    cowMessage = "Moo!! Boros banget sih ! 😡";
     appBg = 'bg-red-50';
     headerBg = 'bg-red-500';
     cardBorder = 'border-red-500';
@@ -1272,7 +1272,7 @@ const SapiFinanceApp = () => {
                          `Belum ada pengeluaran di kategori ${filterCategory}`
                       ) : (
                          <div className="flex flex-col items-center gap-3">
-                           <p>Belum ada pengeluaran. Sapi senang!</p>
+                           <p>Belum ada pengeluaran. Sapi senang! 🐮</p>
                            {/* Menggunakan CowAvatar happy sebagai pengganti simbol */}
                            <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                          </div>
