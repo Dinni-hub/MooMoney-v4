@@ -376,7 +376,7 @@ const SapiFinanceApp = () => {
   const [showMonthAlert, setShowMonthAlert] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
+   
   const [viewArchiveData, setViewArchiveData] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
   const [showManualMonthAlert, setShowManualMonthAlert] = useState(false);
@@ -405,7 +405,7 @@ const SapiFinanceApp = () => {
   };
 
   const { start: periodStart, end: periodEnd } = getActivePeriodRange();
-  
+   
   // SAFE HEADER LABEL
   let headerMonthLabel = "Loading...";
   try {
@@ -549,10 +549,10 @@ const SapiFinanceApp = () => {
     cowMessage = "Moo... Uang Mulai Menipis nih";
     speechBubbleClass = `${currentTheme.border} ${currentTheme.text} font-extrabold text-lg border-4`;
   }
-  
+   
   if (viewArchiveData) {
-     cowMessage = `Arsip: ${viewArchiveData.period}`;
-     appBg = 'bg-gray-100';
+      cowMessage = `Arsip: ${viewArchiveData.period}`;
+      appBg = 'bg-gray-100';
   }
 
   // Chart Data
@@ -597,18 +597,18 @@ const SapiFinanceApp = () => {
 
   // Handlers
   const updateArchive = (updatedData) => {
-     if (!viewArchiveData) return;
-     const newArchiveData = { ...viewArchiveData, ...updatedData };
-     if (updatedData.expenses || updatedData.budget) {
-         const exps = updatedData.expenses || newArchiveData.expenses;
-         const bud = updatedData.budget !== undefined ? updatedData.budget : newArchiveData.budget;
-         const newTotal = exps.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
-         newArchiveData.totalExpenses = newTotal;
-         newArchiveData.balance = bud - newTotal;
-     }
-     setViewArchiveData(newArchiveData);
-     const updatedArchives = archives.map(arc => arc.id === viewArchiveData.id ? newArchiveData : arc);
-     setArchives(updatedArchives);
+      if (!viewArchiveData) return;
+      const newArchiveData = { ...viewArchiveData, ...updatedData };
+      if (updatedData.expenses || updatedData.budget) {
+          const exps = updatedData.expenses || newArchiveData.expenses;
+          const bud = updatedData.budget !== undefined ? updatedData.budget : newArchiveData.budget;
+          const newTotal = exps.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
+          newArchiveData.totalExpenses = newTotal;
+          newArchiveData.balance = bud - newTotal;
+      }
+      setViewArchiveData(newArchiveData);
+      const updatedArchives = archives.map(arc => arc.id === viewArchiveData.id ? newArchiveData : arc);
+      setArchives(updatedArchives);
   };
 
   const handleKeyDown = (e) => {
@@ -624,7 +624,7 @@ const SapiFinanceApp = () => {
   };
   const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(num);
   const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-  
+   
   const smartParseItem = (id, text) => { 
     if (!text) return; 
     let newQty = null;
@@ -641,14 +641,14 @@ const SapiFinanceApp = () => {
     const updateLogic = row => { if (row.id === id) { return { ...row, item: newItemName, qty: newQty !== null ? newQty : row.qty, unit: newUnit !== null ? newUnit : row.unit }; } return row; };
     if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.map(updateLogic) }); } else { setExpenses(expenses.map(updateLogic)); }
   };
-  
+   
   const handleCategoryBudgetChange = (cat, value) => { 
       const cleanValue = value.replace(/\D/g, '');
       const val = cleanValue ? parseFloat(cleanValue) : 0;
       if (viewArchiveData) { updateArchive({ categoryBudgets: { ...viewArchiveData.categoryBudgets, [cat]: val } }); } 
       else { setCategoryBudgets(prev => ({ ...prev, [cat]: val })); }
   };
-  
+   
   const handleMainBudgetChange = (value) => { 
       const cleanValue = value.replace(/\D/g, '');
       const val = cleanValue ? parseFloat(cleanValue) : 0;
@@ -665,9 +665,9 @@ const SapiFinanceApp = () => {
       if (viewArchiveData) { const newCatBudgets = { ...viewArchiveData.categoryBudgets }; delete newCatBudgets[catName]; updateArchive({ categoryBudgets: newCatBudgets }); } 
       else { setVisibleBudgetCats(visibleBudgetCats.filter(c => c !== catName)); }
   };
-  
+   
   const handleToggleFilter = (cat) => { if (filterCategory === cat) { setFilterCategory(null); } else { setFilterCategory(cat); } };
-  
+   
   const handleAddCustomCategory = () => { 
     if (newCatName.trim()) {
         const name = newCatName.trim();
@@ -805,7 +805,7 @@ const SapiFinanceApp = () => {
     e.target.value = null;
   };
   
-  const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
+  // FIX: REMOVED UNUSED TRIGGER FUNCTION, USE LABEL INSTEAD
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
@@ -833,7 +833,7 @@ const SapiFinanceApp = () => {
             </div>
             <div><h1 className="text-lg md:text-2xl font-bold tracking-wide leading-tight">MooMoney</h1><p className="text-[10px] md:text-xs opacity-90 font-medium">{viewArchiveData ? 'Arsip Laporan' : `Periode: ${headerMonthLabel}`}</p></div>
           </div>
-          
+           
           <div className="flex items-center gap-2">
             {viewArchiveData && ( <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> <ArrowLeft size={16} /> KEMBALI </button> )}
             
@@ -863,7 +863,8 @@ const SapiFinanceApp = () => {
                 {/* Desktop Specific */}
                 <button onClick={() => setShowSummary(true)} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Laporan"><FileText size={18} /></button>
                 <button onClick={exportToExcel} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Excel"><Download size={18} /></button>
-                <button onClick={handleImportClick} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Import Excel"><Upload size={18} /></button>
+                {/* Desktop Import Trigger via Label */}
+                <label htmlFor="import-excel-input" className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1 cursor-pointer" title="Import Excel"><Upload size={18} /></label>
             </div>
 
             {/* Mobile Hamburger Menu */}
@@ -874,12 +875,12 @@ const SapiFinanceApp = () => {
                 
                 {isMobileMenuOpen && (
                     <div className="absolute right-0 top-12 bg-white text-gray-800 rounded-xl shadow-xl p-2 w-48 z-50 border border-gray-100 animate-in fade-in slide-in-from-top-2">
-                         <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1">
                             <button onClick={() => { setShowSummary(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
                             <button onClick={() => { exportToExcel(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
-                            {/* MOBILE IMPORT: USE LABEL FOR NATIVE FILE TRIGGER */}
-                            <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"><Upload size={16}/> Import Excel</label>
-                         </div>
+                            {/* MOBILE IMPORT: FIX USING LABEL */}
+                            <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer w-full"><Upload size={16}/> Import Excel</label>
+                          </div>
                     </div>
                 )}
             </div>
@@ -887,7 +888,7 @@ const SapiFinanceApp = () => {
           </div>
         </div>
       </div>
-      
+       
       {/* ... (Rest of the UI remains the same) ... */}
       <div className="max-w-7xl mx-auto p-3 md:p-6 lg:p-8">
         {viewArchiveData && ( <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded shadow-sm"> <p className="font-bold flex items-center gap-2"><History size={18}/> Mode Arsip: {viewArchiveData.period}</p> <p className="text-xs">Data masa lalu (Dapat diedit).</p> </div> )}
@@ -898,67 +899,67 @@ const SapiFinanceApp = () => {
             <div className={`mt-2 md:mt-4 font-bold text-base md:text-lg ${cowMood === 'angry' ? 'text-red-600' : cowMood === 'warning' ? 'text-orange-600' : 'text-gray-700'}`}>Status: {cowMood === 'angry' ? 'BAHAYA' : cowMood === 'warning' ? 'WASPADA' : 'AMAN'}</div>
           </div>
           <div className="lg:col-span-2 flex flex-col gap-4">
-             <div className={`grid grid-cols-1 ${totalExpenses > 0 ? 'md:grid-cols-2' : ''} gap-4`}>
-              <div className={`bg-white rounded-2xl shadow-lg p-4 md:p-6 border-l-8 ${cardBorder} transition-colors flex flex-col justify-center`}>
-                <h2 className="text-gray-500 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Target Budget Bulanan</h2>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                  <div className={`hidden sm:block p-3 rounded-full ${isOverBudget ? 'bg-red-100 text-red-600' : `${currentTheme.light} ${currentTheme.text}`}`}> <TrendingUp size={24} /> </div>
-                  <div className="flex-1 w-full"> <label className="text-[10px] md:text-xs text-gray-400 block mb-1">Ketuk angka untuk edit</label> <div className="relative w-full"> <span className="absolute left-0 bottom-2 text-lg md:text-2xl font-bold text-gray-400">Rp</span> <input type="text" inputMode="numeric" value={activeBudget === 0 ? '' : formatNumber(activeBudget)} placeholder="0" onChange={(e) => handleMainBudgetChange(e.target.value)} onKeyDown={handleKeyDown} disabled={!!viewArchiveData} className={`w-full pl-8 md:pl-10 pb-1 text-2xl md:text-4xl font-bold text-gray-800 border-b-2 border-dashed border-gray-300 ${currentTheme.ring} focus:outline-none bg-transparent transition-all disabled:opacity-50`} /> </div> </div>
-                </div>
-              </div>
+              <div className={`grid grid-cols-1 ${totalExpenses > 0 ? 'md:grid-cols-2' : ''} gap-4`}>
+               <div className={`bg-white rounded-2xl shadow-lg p-4 md:p-6 border-l-8 ${cardBorder} transition-colors flex flex-col justify-center`}>
+                 <h2 className="text-gray-500 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Target Budget Bulanan</h2>
+                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                   <div className={`hidden sm:block p-3 rounded-full ${isOverBudget ? 'bg-red-100 text-red-600' : `${currentTheme.light} ${currentTheme.text}`}`}> <TrendingUp size={24} /> </div>
+                   <div className="flex-1 w-full"> <label className="text-[10px] md:text-xs text-gray-400 block mb-1">Ketuk angka untuk edit</label> <div className="relative w-full"> <span className="absolute left-0 bottom-2 text-lg md:text-2xl font-bold text-gray-400">Rp</span> <input type="text" inputMode="numeric" value={activeBudget === 0 ? '' : formatNumber(activeBudget)} placeholder="0" onChange={(e) => handleMainBudgetChange(e.target.value)} onKeyDown={handleKeyDown} disabled={!!viewArchiveData} className={`w-full pl-8 md:pl-10 pb-1 text-2xl md:text-4xl font-bold text-gray-800 border-b-2 border-dashed border-gray-300 ${currentTheme.ring} focus:outline-none bg-transparent transition-all disabled:opacity-50`} /> </div> </div>
+                 </div>
+               </div>
+               
+               {/* Chart Always Visible */}
+                <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
+                   <h3 className="text-gray-600 text-sm font-bold flex items-center gap-2 mb-3"> <PieChart size={16} className="text-indigo-400" /> Statistik Pengeluaran </h3>
+                   {totalExpenses > 0 ? (
+                   <div className="flex flex-row items-center gap-4 justify-between">
+                     <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
+                       <div className="w-full h-full rounded-full shadow-inner" style={{ background: gradientString, transition: 'background 0.5s ease-in-out' }}>
+                           <SvgPieChart data={chartData} />
+                       </div>
+                     </div>
+                     <div className="flex-1 overflow-y-auto max-h-32 custom-scrollbar">
+                       <div className="grid grid-cols-1 gap-1">
+                         {chartData.map((d, i) => (
+                            <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
+                             <div className="flex items-center gap-1.5"> 
+                                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }}></span> 
+                                 <span className="text-gray-600 truncate max-w-[80px]">{d.name}</span> 
+                             </div> 
+                             <span className="font-mono text-gray-500 font-bold">{formatRupiah(d.value)}</span>
+                           </div>
+                          ))}
+                       </div>
+                     </div>
+                   </div>
+                   ) : (
+                       <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-gray-400">
+                         <div className="w-20 h-20 rounded-full border-4 border-dashed border-gray-200 flex items-center justify-center mb-2">
+                             <span className="text-xs font-bold text-gray-300">0%</span>
+                         </div>
+                         <span className="text-xs italic">Belum ada pengeluaran</span>
+                     </div>
+                   )}
+               </div>
+             </div>
               
-              {/* Chart Always Visible */}
-               <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
-                  <h3 className="text-gray-600 text-sm font-bold flex items-center gap-2 mb-3"> <PieChart size={16} className="text-indigo-400" /> Statistik Pengeluaran </h3>
-                  {totalExpenses > 0 ? (
-                  <div className="flex flex-row items-center gap-4 justify-between">
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
-                      <div className="w-full h-full rounded-full shadow-inner" style={{ background: gradientString, transition: 'background 0.5s ease-in-out' }}>
-                          <SvgPieChart data={chartData} />
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto max-h-32 custom-scrollbar">
-                      <div className="grid grid-cols-1 gap-1">
-                        {chartData.map((d, i) => (
-                           <div key={i} className="flex items-center justify-between text-[10px] sm:text-xs">
-                            <div className="flex items-center gap-1.5"> 
-                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }}></span> 
-                                <span className="text-gray-600 truncate max-w-[80px]">{d.name}</span> 
-                            </div> 
-                            <span className="font-mono text-gray-500 font-bold">{formatRupiah(d.value)}</span>
-                          </div>
-                         ))}
-                      </div>
-                    </div>
-                  </div>
-                  ) : (
-                      <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-gray-400">
-                        <div className="w-20 h-20 rounded-full border-4 border-dashed border-gray-200 flex items-center justify-center mb-2">
-                            <span className="text-xs font-bold text-gray-300">0%</span>
-                        </div>
-                        <span className="text-xs italic">Belum ada pengeluaran</span>
-                    </div>
-                  )}
-              </div>
-            </div>
-             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-              <div className={`rounded-2xl shadow-lg p-4 md:p-5 border-l-8 ${isOverBudget ? 'bg-red-50 border-red-500' : 'bg-white border-green-400'}`}>
-                 <div className="flex justify-between items-start"> <div> <p className="text-gray-500 text-xs md:text-sm font-semibold">Terpakai</p> <p className={`text-xl md:text-2xl font-bold mt-1 break-all ${isOverBudget ? 'text-red-600' : 'text-gray-800'}`}> {formatRupiah(totalExpenses)} </p> </div> <Calculator className={`w-5 h-5 md:w-6 md:h-6 ${isOverBudget ? 'text-red-300' : 'text-green-300'}`} /> </div>
-                 <div className="w-full bg-gray-200/80 rounded-full h-2 mt-3 md:mt-4 overflow-hidden"> <div className={`h-2 rounded-full transition-all duration-500 ${progressBarColor}`} style={{ width: `${activeBudget > 0 ? Math.min((totalExpenses / activeBudget) * 100, 100) : 0}%` }}></div> </div>
-                 <p className="text-[10px] md:text-xs text-right mt-1 text-gray-400"> {activeBudget > 0 ? ((totalExpenses/activeBudget)*100).toFixed(1) : 0}% dari budget </p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-blue-400">
-                 <div className="flex justify-between items-start"> <div> <p className="text-gray-500 text-xs md:text-sm font-semibold">Sisa Saldo</p> <p className={`text-xl md:text-2xl font-bold mt-1 break-all ${balance < 0 ? 'text-red-500' : 'text-blue-600'}`}> {formatRupiah(balance)} </p> </div> <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-blue-300" /> </div>
-                 <p className="text-[10px] md:text-xs mt-3 md:mt-4 text-gray-400"> {balance < 0 ? 'Segera evaluasi!' : 'Aman terkendali.'} </p>
-              </div>
-            </div>
-          </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+               <div className={`rounded-2xl shadow-lg p-4 md:p-5 border-l-8 ${isOverBudget ? 'bg-red-50 border-red-500' : 'bg-white border-green-400'}`}>
+                  <div className="flex justify-between items-start"> <div> <p className="text-gray-500 text-xs md:text-sm font-semibold">Terpakai</p> <p className={`text-xl md:text-2xl font-bold mt-1 break-all ${isOverBudget ? 'text-red-600' : 'text-gray-800'}`}> {formatRupiah(totalExpenses)} </p> </div> <Calculator className={`w-5 h-5 md:w-6 md:h-6 ${isOverBudget ? 'text-red-300' : 'text-green-300'}`} /> </div>
+                  <div className="w-full bg-gray-200/80 rounded-full h-2 mt-3 md:mt-4 overflow-hidden"> <div className={`h-2 rounded-full transition-all duration-500 ${progressBarColor}`} style={{ width: `${activeBudget > 0 ? Math.min((totalExpenses / activeBudget) * 100, 100) : 0}%` }}></div> </div>
+                  <p className="text-[10px] md:text-xs text-right mt-1 text-gray-400"> {activeBudget > 0 ? ((totalExpenses/activeBudget)*100).toFixed(1) : 0}% dari budget </p>
+               </div>
+               <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-blue-400">
+                  <div className="flex justify-between items-start"> <div> <p className="text-gray-500 text-xs md:text-sm font-semibold">Sisa Saldo</p> <p className={`text-xl md:text-2xl font-bold mt-1 break-all ${balance < 0 ? 'text-red-500' : 'text-blue-600'}`}> {formatRupiah(balance)} </p> </div> <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-blue-300" /> </div>
+                  <p className="text-[10px] md:text-xs mt-3 md:mt-4 text-gray-400"> {balance < 0 ? 'Segera evaluasi!' : 'Aman terkendali.'} </p>
+               </div>
+             </div>
+           </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 mb-8">
           <h3 className={`text-lg font-bold ${currentTheme.text} flex items-center gap-2 mb-4`}> <Wallet size={20} /> Alokasi Budget per Kategori </h3>
-          
+           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {(viewArchiveData ? Object.keys(activeCategoryBudgets) : visibleBudgetCats).map((cat, idx) => {
               if (viewArchiveData && !activeCategoryBudgets[cat] && !expenseByCategory[cat]) return null;
@@ -986,38 +987,38 @@ const SapiFinanceApp = () => {
                 </div>
               );
             })}
-            
+             
             {!viewArchiveData && (isAddingCat ? (
               <div className={`shadow-sm rounded-xl p-3 relative overflow-hidden border border-gray-100 border-l-4 ${currentTheme.border} bg-white flex flex-col justify-center min-h-[100px]`}>
-                 {isCreatingCustom ? (
-                    <>
-                         <p className="text-xs font-bold text-gray-500 mb-1">Nama Kategori Baru:</p>
-                        <div className="flex gap-2 items-center">
-                           <input ref={newCatInputRef} type="text" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomCategory(); if (e.key === 'Escape') setIsCreatingCustom(false); }} placeholder="..." className={`w-full border-b-2 ${currentTheme.border} focus:outline-none text-sm py-1 bg-transparent`} />
-                           <button onClick={handleAddCustomCategory} className="text-green-500 hover:text-green-700 p-1"><Check size={16} /></button>
-                           <button onClick={() => setIsCreatingCustom(false)} className="text-red-400 hover:text-red-600 p-1"><X size={16} /></button>
-                        </div>
-                    </>
-                 ) : (
-                    <>
-                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-gray-50"> <p className="text-xs font-bold text-gray-500">Pilih Kategori:</p> <button onClick={() => setIsAddingCat(false)} className="text-gray-400 hover:text-red-500"><X size={14} /></button> </div>
-                        <div className="flex-1 overflow-y-auto max-h-[120px] custom-scrollbar pr-1">
-                           <div className="grid grid-cols-1 gap-1">
+                  {isCreatingCustom ? (
+                     <>
+                          <p className="text-xs font-bold text-gray-500 mb-1">Nama Kategori Baru:</p>
+                         <div className="flex gap-2 items-center">
+                            <input ref={newCatInputRef} type="text" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddCustomCategory(); if (e.key === 'Escape') setIsCreatingCustom(false); }} placeholder="..." className={`w-full border-b-2 ${currentTheme.border} focus:outline-none text-sm py-1 bg-transparent`} />
+                            <button onClick={handleAddCustomCategory} className="text-green-500 hover:text-green-700 p-1"><Check size={16} /></button>
+                            <button onClick={() => setIsCreatingCustom(false)} className="text-red-400 hover:text-red-600 p-1"><X size={16} /></button>
+                         </div>
+                     </>
+                  ) : (
+                     <>
+                         <div className="flex justify-between items-center mb-2 pb-1 border-b border-gray-50"> <p className="text-xs font-bold text-gray-500">Pilih Kategori:</p> <button onClick={() => setIsAddingCat(false)} className="text-gray-400 hover:text-red-500"><X size={14} /></button> </div>
+                         <div className="flex-1 overflow-y-auto max-h-[120px] custom-scrollbar pr-1">
+                            <div className="grid grid-cols-1 gap-1">
                              {categories.filter(c => !visibleBudgetCats.includes(c)).map(cat => ( <button key={cat} onClick={() => handleAddCategoryToBudget(cat)} className={`text-left text-xs px-2 py-1.5 rounded hover:bg-gray-50 ${currentTheme.text} transition-colors flex items-center justify-between group`}> {cat} <Plus size={10} className="opacity-0 group-hover:opacity-100" /> </button> ))}
                              <button onClick={() => setIsCreatingCustom(true)} className="text-left text-xs px-2 py-1.5 rounded hover:bg-pink-50 text-pink-500 font-bold flex items-center gap-1 mt-1 border-t border-gray-50 pt-2"> <Plus size={10} /> Buat Kategori Sendiri </button>
-                           </div>
-                        </div>
-                    </>
-                 )}
+                            </div>
+                         </div>
+                     </>
+                  )}
               </div>
             ) : (
-               <button onClick={() => setIsAddingCat(true)} className="border-2 border-dashed border-gray-300 rounded-xl p-3 flex flex-col items-center justify-center text-gray-400 hover:border-pink-400 hover:text-pink-500 transition-colors min-h-[100px]"> <Plus size={24} /> <span className="text-xs font-bold mt-1">Tambahkan Kategori</span> </button>
+                <button onClick={() => setIsAddingCat(true)} className="border-2 border-dashed border-gray-300 rounded-xl p-3 flex flex-col items-center justify-center text-gray-400 hover:border-pink-400 hover:text-pink-500 transition-colors min-h-[100px]"> <Plus size={24} /> <span className="text-xs font-bold mt-1">Tambahkan Kategori</span> </button>
             ))}
           </div>
         </div>
 
         <div className={`bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-8`}>
-           <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors`}>
+           <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors sticky left-0`}>
             {/* IKON CATATAN PENGELUARAN: FILE TEXT */}
              <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
               <div className="bg-white/50 p-1.5 rounded text-inherit">
@@ -1027,23 +1028,24 @@ const SapiFinanceApp = () => {
               {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
               <span className="inline sm:hidden">Daftar</span>
             </h3>
-            {/* ALLOW ADD ROW EVEN IN ARCHIVE MODE AS REQUESTED */}
-            <button onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95`}>
-              <Plus size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Tambah Baris</span><span className="inline sm:hidden">Tambahkan</span>
+            {/* FIX: ENSURE BUTTON IS CLICKABLE AND VISIBLE */}
+            <button onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-md active:scale-95 z-10`}>
+              <Plus size={16} /> <span>Tambah Baris</span>
             </button>
           </div>
-          
-          <div className="w-full">
-            <table className="w-full text-left border-collapse table-fixed">
+           
+          {/* FIX: ADD OVERFLOW-X-AUTO FOR RESPONSIVE TABLE */}
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full">
               <thead>
                 <tr className="text-gray-900 text-[10px] md:text-sm uppercase tracking-wider">
-                  <th className={`p-1 md:p-4 w-[8%] md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
-                   <th className={`p-1 md:p-4 w-[19%] md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
-                  <th className={`p-1 md:p-4 w-[21%] md:w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
-                  <th className={`p-1 md:p-4 w-[10%] md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
-                  <th className={`p-1 md:p-4 w-[14%] md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
-                   <th className={`p-1 md:p-4 w-[20%] md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
-                  <th className={`p-1 md:p-4 w-[8%] md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
+                  <th className={`p-2 md:p-4 w-[50px] md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl sticky left-0 z-10`}>No</th>
+                   <th className={`p-2 md:p-4 min-w-[100px] md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
+                  <th className={`p-2 md:p-4 min-w-[150px] md:w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
+                  <th className={`p-2 md:p-4 min-w-[60px] md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
+                  <th className={`p-2 md:p-4 min-w-[120px] md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
+                   <th className={`p-2 md:p-4 min-w-[100px] md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
+                  <th className={`p-2 md:p-4 w-[50px] md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1051,20 +1053,19 @@ const SapiFinanceApp = () => {
                   <tr>
                     <td colSpan="7" className="p-8 text-center text-gray-400 italic text-sm">
                       {filterCategory ? (
-                         `Belum ada pengeluaran di kategori ${filterCategory}`
+                          `Belum ada pengeluaran di kategori ${filterCategory}`
                       ) : (
-                         <div className="flex flex-col items-center gap-3">
-                           <p>Belum ada pengeluaran. Sapi senang! 🐮</p>
-                           {/* Menggunakan CowAvatar happy sebagai pengganti simbol */}
-                           <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
-                         </div>
+                          <div className="flex flex-col items-center gap-3">
+                            <p>Belum ada pengeluaran. Sapi senang! 🐮</p>
+                            <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
+                          </div>
                       )}
                     </td>
                   </tr>
                 ) : (
                   filteredExpenses.map((row, index) => {
                     const isNewDateGroup = index === 0 || row.date !== filteredExpenses[index - 1].date;
-                    
+                     
                     // CALCULATE DAILY TOTAL
                     let dailyTotalElement = null;
                     if (isNewDateGroup) {
@@ -1077,7 +1078,7 @@ const SapiFinanceApp = () => {
 
                         dailyTotalElement = (
                             <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
-                                <td colSpan="7" className="p-2 md:px-4">
+                                <td colSpan="7" className="p-2 md:px-4 sticky left-0">
                                     <div className="flex justify-between items-center text-xs md:text-sm font-bold text-gray-600">
                                         <span>{dateLabel}</span>
                                         <span className={`${currentTheme.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
@@ -1093,7 +1094,7 @@ const SapiFinanceApp = () => {
                     <React.Fragment key={row.id}>
                       {dailyTotalElement}
                       <tr className="hover:bg-gray-50 transition-colors group">
-                        <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
+                        <td className={`p-2 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]} sticky left-0 z-10 bg-inherit shadow-sm md:shadow-none`}>{index + 1}</td>
                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
                           <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
                         </td>
