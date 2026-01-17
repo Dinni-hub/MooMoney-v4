@@ -761,6 +761,8 @@ const SapiFinanceApp = () => {
                 {/* Hidden on mobile to save space, show in hamburger instead */}
                 <button onClick={() => setShowSummary(true)} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Laporan"><FileText size={18} /></button>
                 <button onClick={exportToExcel} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Excel"><Download size={18} /></button>
+                {/* 🔥 TOMBOL IMPORT SUDAH DIKEMBALIKAN KE SINI 🔥 */}
+                <button onClick={handleImportClick} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Import Excel"><Upload size={18} /></button>
             </div>
 
             {/* Mobile Hamburger Menu (For extra features) */}
@@ -978,14 +980,8 @@ const SapiFinanceApp = () => {
                             .filter(e => e.date === row.date)
                             .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
                         
-                        // Prevent invalid date error
-                        let dateLabel = "Tanggal Tidak Valid";
-                        if (row.date) {
-                            try {
-                                const dateObj = new Date(row.date);
-                                dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                            } catch (e) {}
-                        }
+                        const dateObj = new Date(row.date);
+                        const dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
                         dailyTotalElement = (
                             <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
