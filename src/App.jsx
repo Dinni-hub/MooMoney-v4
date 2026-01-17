@@ -1027,9 +1027,9 @@ const SapiFinanceApp = () => {
               {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
               <span className="inline sm:hidden">Daftar</span>
              </h3>
-             {/* ALLOW ADD ROW EVEN IN ARCHIVE MODE AS REQUESTED */}
-             <button onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95 hidden md:flex`}>
-               <Plus size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Tambah Baris</span><span className="inline sm:hidden">Tambahkan</span>
+             {/* --- FIX: TOMBOL TAMBAH BARIS KEMBALI MUNCUL DI HP --- */}
+             <button onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95 cursor-pointer`}>
+               <Plus size={14} className="md:w-4 md:h-4" /> <span className="inline">Tambah</span><span className="hidden sm:inline"> Baris</span>
              </button>
            </div>
            
@@ -1206,7 +1206,7 @@ const SapiFinanceApp = () => {
 
       </div>
 
-      {/* FLOATING ACTION BUTTON FOR MOBILE ADD ROW */}
+      {/* FLOATING ACTION BUTTON FOR MOBILE ADD ROW (Opsional, tetap ada sebagai cadangan) */}
       <button 
         onClick={handleAddRow} 
         className={`md:hidden fixed bottom-6 right-6 ${currentTheme.bg} text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform`}
