@@ -103,8 +103,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="8" fill="#fff" stroke="#000" strokeWidth="2" />
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
-            
-            {/* Tetesan Air Keringat (Kecil & Di Dahi) */}
+            {/* Tetesan Air Keringat */}
             <path d="M135 40 Q 145 55 145 62 A 10 10 0 1 1 125 62 Q 125 55 135 40 Z" fill="#3b82f6" opacity="0.9" />
             <path d="M132 55 Q 133 52 135 55" stroke="#fff" strokeWidth="2" fill="none" opacity="0.7" />
           </>
@@ -204,7 +203,7 @@ const SvgPieChart = ({ data, size = 120 }) => {
     );
 };
 
-// --- SETTINGS MODAL (UNTUK TANGGAL MULAI) ---
+// --- SETTINGS MODAL ---
 const SettingsModal = ({ isOpen, onClose, cutoffDay, setCutoffDay }) => {
     if (!isOpen) return null;
     return (
@@ -220,7 +219,7 @@ const SettingsModal = ({ isOpen, onClose, cutoffDay, setCutoffDay }) => {
                         <p className="text-xs text-gray-400 mb-3">Pilih tanggal gajian kamu. Laporan akan dihitung mulai dari tanggal ini setiap bulannya.</p>
                         <select 
                             value={cutoffDay} 
-                            onChange={(e) => setCutoffDay(parseInt(e.target.value))} 
+                            onChange={(e) => setCutoffDay(parseInt(e.target.value) || 1)} 
                             className="w-full p-3 rounded-xl border border-gray-300 font-bold text-lg bg-gray-50 focus:border-blue-500 focus:outline-none cursor-pointer"
                         >
                             {[...Array(28)].map((_, i) => (
@@ -235,34 +234,126 @@ const SettingsModal = ({ isOpen, onClose, cutoffDay, setCutoffDay }) => {
     );
 }
 
-// --- MAIN APP ---
+const HistoryModal = ({ isOpen, onClose, archives, onLoadArchive, onDeleteArchive, currentMonthLabel }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative max-h-[80vh] flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2"><History size={20} /> Riwayat Laporan</h3>
+          <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+        </div>
+        <div className="p-4 overflow-y-auto flex-1">
+          {archives.length === 0 ? ( <div className="text-center py-8 text-gray-400"><p>Belum ada arsip laporan bulanan.</p></div> ) : (
+            <div className="space-y-2">
+              {archives.map((arch) => (
+                <div key={arch.id} className="w-full p-2 pl-4 pr-2 rounded-xl border border-gray-100 hover:border-pink-300 hover:bg-pink-50 transition-all flex justify-between items-center group">
+                  <div onClick={() => onLoadArchive(arch)} className="flex-1 text-left cursor-pointer">
+                    <p className="font-bold text-gray-800">{arch.period}</p>
+                    <p className="text-xs text-gray-500">Saldo: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(arch.balance)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <button onClick={() => onLoadArchive(arch)} className="p-2 text-gray-300 hover:text-pink-500 transition-colors" title="Lihat & Edit"> <ChevronDown className="-rotate-90" size={20} /> </button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteArchive(arch.id); }} className="p-2 text-gray-300 hover:text-red-500 transition-colors" title="Hapus Arsip"> <Trash2 size={18} /> </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="p-4 bg-gray-50 border-t text-center text-xs text-gray-400"> Bulan Aktif: <span className="font-bold text-gray-600">{currentMonthLabel}</span> </div>
+      </div>
+    </div>
+  );
+};
+
+const SummaryModal = ({ isOpen, onClose, totalBudget, totalExpenses, balance, theme }) => {
+  if (!isOpen) return null;
+  const isSurplus = balance >= 0;
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={24} /></button>
+        <div className={`p-6 text-center ${isSurplus ? 'bg-green-50' : 'bg-red-50'}`}>
+           <h2 className="text-2xl font-bold text-gray-800 mb-2">Laporan Akhir Bulan</h2>
+           <p className="text-sm text-gray-500">Ringkasan Keuangan MooMoney</p>
+          <div className="mt-6 mb-4"><CowAvatar mood={isSurplus ? 'happy' : 'angry'} className="w-32 h-32 mx-auto" uniqueId="summary-cow" /></div>
+           <p className={`text-lg font-bold ${isSurplus ? 'text-green-600' : 'text-red-600'} mb-6`}>{isSurplus ? "Moo~ Mantap! Kamu Hemat!" : "Moo... Kantong Jebol!"}</p>
+        </div>
+        <div className="p-6 space-y-4">
+           <div className="flex justify-between items-center border-b border-dashed pb-2"><span className="text-gray-500">Total Pemasukan (Budget)</span><span className="font-bold text-gray-800">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalBudget)}</span></div>
+            <div className="flex justify-between items-center border-b border-dashed pb-2"><span className="text-gray-500">Total Pengeluaran</span><span className="font-bold text-red-500">-{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalExpenses)}</span></div>
+           <div className={`flex justify-between items-center pt-2 text-xl font-bold ${isSurplus ? 'text-green-600' : 'text-red-600'}`}><span>{isSurplus ? 'Sisa Tabungan' : 'Defisit / Hutang'}</span><span>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Math.abs(balance))}</span></div>
+        </div>
+        <div className="p-6 pt-0"><button onClick={onClose} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 ${theme.bg} ${theme.hover}`}>Tutup Laporan</button></div>
+      </div>
+    </div>
+  );
+};
+
+const NewMonthModal = ({ isOpen, onClose, onExport, onReset, monthName }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative border-4 border-pink-200">
+        <div className="p-6 text-center bg-pink-50">
+           <h2 className="text-2xl font-bold text-pink-600 mb-2 flex items-center justify-center gap-2">
+             <Calendar size={28} /> Bulan Baru!
+           </h2>
+           <p className="text-sm text-gray-600">
+             Moo! Sepertinya kita sudah masuk bulan <b>{monthName}</b>.
+             Waktunya mengarsipkan data bulan lalu dan mulai lembaran baru yang bersih! ✨
+           </p>
+           <div className="mt-4">
+             <CowAvatar mood="happy" className="w-24 h-24 mx-auto" uniqueId="new-month-cow" />
+           </div>
+        </div>
+        <div className="p-6 space-y-3">
+          <button onClick={onExport} className="w-full py-3 rounded-xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center gap-2"> <Download size={20} /> Unduh Laporan (Excel) </button>
+          <button onClick={onReset} className="w-full py-3 rounded-xl font-bold text-white bg-pink-500 hover:bg-pink-600 shadow-lg"> Reset Data & Mulai Baru (Arsipkan Otomatis) </button>
+          <button onClick={onClose} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600"> Nanti Saja (Tetap di Data Lama) </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ManualMonthChangeModal = ({ isOpen, onClose, onConfirm, newMonthName }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-in fade-in backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden relative border-4 border-orange-200">
+         <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500"> <ArrowRightCircle size={32} /> </div>
+             <h3 className="text-xl font-bold text-gray-800 mb-2">Ganti ke {newMonthName}?</h3>
+            <p className="text-sm text-gray-500 mb-6"> Kamu memasukkan tanggal di bulan baru. Sistem akan otomatis mengarsipkan data bulan ini ke Riwayat dan memulai lembaran baru untuk <b>{newMonthName}</b>. </p>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-50">Batal</button>
+               <button onClick={onConfirm} className="flex-1 py-2 rounded-xl bg-orange-500 font-bold text-white hover:bg-orange-600 shadow-lg">Lanjut</button>
+            </div>
+         </div>
+      </div>
+    </div>
+  );
+}
+
 const SapiFinanceApp = () => {
-  // Constants
+  // --- Constants ---
   const INITIAL_CATEGORIES = ['Kebutuhan Bulanan', 'Kebutuhan Mingguan', 'Buah', 'Snack', 'Tagihan', 'Skincare', 'Kesehatan', 'Sedekah', 'Transportasi', 'Lainnya'];
   const CATEGORY_UNITS = { 'Kebutuhan Bulanan': 'pcs', 'Kebutuhan Mingguan': 'pcs/kg', 'Buah': 'kg', 'Snack': 'pcs', 'Tagihan': '-', 'Skincare': 'pcs', 'Kesehatan': 'pcs', 'Sedekah': '-', 'Transportasi': 'kali', 'Lainnya': '-', 'Refill Galon': 'galon', 'Galon': 'galon' };
   const THEMES = {
-    pink: { base: 'pink', hex: '#ec4899', name: 'Pink', bg: 'bg-pink-500', bgSoft: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-400', hover: 'hover:bg-pink-600', light: 'bg-pink-100', icon: 'text-pink-400', ring: 'focus:border-pink-500',
-      table: { header: ['bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600', 'bg-pink-700', 'bg-pink-800'], cell: ['bg-pink-50', 'bg-pink-100', 'bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600'] }
-    },
-    blue: { base: 'blue', hex: '#3b82f6', name: 'Biru', bg: 'bg-blue-500', bgSoft: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-400', hover: 'hover:bg-blue-600', light: 'bg-blue-100', icon: 'text-blue-400', ring: 'focus:border-blue-500',
-      table: { header: ['bg-blue-200', 'bg-blue-300', 'bg-blue-400', 'bg-blue-500', 'bg-blue-600', 'bg-blue-700', 'bg-blue-800'], cell: ['bg-blue-50', 'bg-blue-100', 'bg-blue-200', 'bg-blue-300', 'bg-blue-400', 'bg-blue-500', 'bg-blue-600'] }
-    },
-    green: { base: 'emerald', hex: '#10b981', name: 'Hijau', bg: 'bg-emerald-500', bgSoft: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', hover: 'hover:bg-emerald-600', light: 'bg-emerald-100', icon: 'text-emerald-400', ring: 'focus:border-emerald-500',
-      table: { header: ['bg-emerald-200', 'bg-emerald-300', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600', 'bg-emerald-700', 'bg-emerald-800'], cell: ['bg-emerald-50', 'bg-emerald-100', 'bg-emerald-200', 'bg-emerald-300', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600'] }
-    },
-    purple: { base: 'purple', hex: '#8b5cf6', name: 'Ungu', bg: 'bg-purple-500', bgSoft: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-400', hover: 'hover:bg-purple-600', light: 'bg-purple-100', icon: 'text-purple-400', ring: 'focus:border-purple-500',
-      table: { header: ['bg-purple-200', 'bg-purple-300', 'bg-purple-400', 'bg-purple-500', 'bg-purple-600', 'bg-purple-700', 'bg-purple-800'], cell: ['bg-purple-50', 'bg-purple-100', 'bg-purple-200', 'bg-purple-300', 'bg-purple-400', 'bg-purple-500', 'bg-purple-600'] }
-    },
-    orange: { base: 'orange', hex: '#f97316', name: 'Oranye', bg: 'bg-orange-500', bgSoft: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-400', hover: 'hover:bg-orange-600', light: 'bg-orange-100', icon: 'text-orange-400', ring: 'focus:border-orange-500',
-      table: { header: ['bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500', 'bg-orange-600', 'bg-orange-700', 'bg-orange-800'], cell: ['bg-orange-50', 'bg-orange-100', 'bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500', 'bg-orange-600'] }
-    },
+    pink: { base: 'pink', hex: '#ec4899', name: 'Pink', bg: 'bg-pink-500', bgSoft: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-400', hover: 'hover:bg-pink-600', light: 'bg-pink-100', icon: 'text-pink-400', ring: 'focus:border-pink-500', table: { header: ['bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600', 'bg-pink-700', 'bg-pink-800'], cell: ['bg-pink-50', 'bg-pink-100', 'bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600'] } },
+    blue: { base: 'blue', hex: '#3b82f6', name: 'Biru', bg: 'bg-blue-500', bgSoft: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-400', hover: 'hover:bg-blue-600', light: 'bg-blue-100', icon: 'text-blue-400', ring: 'focus:border-blue-500', table: { header: ['bg-blue-200', 'bg-blue-300', 'bg-blue-400', 'bg-blue-500', 'bg-blue-600', 'bg-blue-700', 'bg-blue-800'], cell: ['bg-blue-50', 'bg-blue-100', 'bg-blue-200', 'bg-blue-300', 'bg-blue-400', 'bg-blue-500', 'bg-blue-600'] } },
+    green: { base: 'emerald', hex: '#10b981', name: 'Hijau', bg: 'bg-emerald-500', bgSoft: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-400', hover: 'hover:bg-emerald-600', light: 'bg-emerald-100', icon: 'text-emerald-400', ring: 'focus:border-emerald-500', table: { header: ['bg-emerald-200', 'bg-emerald-300', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600', 'bg-emerald-700', 'bg-emerald-800'], cell: ['bg-emerald-50', 'bg-emerald-100', 'bg-emerald-200', 'bg-emerald-300', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600'] } },
+    purple: { base: 'purple', hex: '#8b5cf6', name: 'Ungu', bg: 'bg-purple-500', bgSoft: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-400', hover: 'hover:bg-purple-600', light: 'bg-purple-100', icon: 'text-purple-400', ring: 'focus:border-purple-500', table: { header: ['bg-purple-200', 'bg-purple-300', 'bg-purple-400', 'bg-purple-500', 'bg-purple-600', 'bg-purple-700', 'bg-purple-800'], cell: ['bg-purple-50', 'bg-purple-100', 'bg-purple-200', 'bg-purple-300', 'bg-purple-400', 'bg-purple-500', 'bg-purple-600'] } },
+    orange: { base: 'orange', hex: '#f97316', name: 'Oranye', bg: 'bg-orange-500', bgSoft: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-400', hover: 'hover:bg-orange-600', light: 'bg-orange-100', icon: 'text-orange-400', ring: 'focus:border-orange-500', table: { header: ['bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500', 'bg-orange-600', 'bg-orange-700', 'bg-orange-800'], cell: ['bg-orange-50', 'bg-orange-100', 'bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500', 'bg-orange-600'] } },
   };
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
   const getCurrentMonthISO = () => new Date().toISOString().slice(0, 7);
 
   // --- STATE ---
   const [budget, setBudget] = useLocalStorage('moomoney_budget', 2000000);
-  const [cutoffDay, setCutoffDay] = useLocalStorage('moomoney_cutoff', 1); // Default tanggal 1
+  const [cutoffDay, setCutoffDay] = useLocalStorage('moomoney_cutoff', 1);
   const [themeKey, setThemeKey] = useLocalStorage('moomoney_theme', 'pink');
   const [categories, setCategories] = useLocalStorage('moomoney_categories', INITIAL_CATEGORIES);
   const [visibleBudgetCats, setVisibleBudgetCats] = useLocalStorage('moomoney_visibleBudgets', []);
@@ -284,7 +375,7 @@ const SapiFinanceApp = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showMonthAlert, setShowMonthAlert] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showSettings, setShowSettings] = useState(false); // Modal Settings
+  const [showSettings, setShowSettings] = useState(false);
   
   const [viewArchiveData, setViewArchiveData] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
@@ -293,33 +384,42 @@ const SapiFinanceApp = () => {
   const [pendingRowId, setPendingRowId] = useState(null);
   const [pendingDateValue, setPendingDateValue] = useState(null);
 
-  // --- HELPER: PERIOD CALCULATION ---
+  // --- HELPER: PERIOD CALCULATION (SAFE MODE) ---
   const getActivePeriodRange = () => {
       const today = new Date();
       const currentYear = today.getFullYear();
       const currentMonth = today.getMonth(); 
       const currentDay = today.getDate();
+      
+      // SAFETY: Ensure cutoffDay is integer
+      const day = parseInt(cutoffDay) || 1;
 
       let start, end;
-      if (currentDay >= cutoffDay) {
-          start = new Date(currentYear, currentMonth, cutoffDay);
-          end = new Date(currentYear, currentMonth + 1, cutoffDay - 1);
+      if (currentDay >= day) {
+          start = new Date(currentYear, currentMonth, day);
+          end = new Date(currentYear, currentMonth + 1, day - 1);
       } else {
-          start = new Date(currentYear, currentMonth - 1, cutoffDay);
-          end = new Date(currentYear, currentMonth, cutoffDay - 1);
+          start = new Date(currentYear, currentMonth - 1, day);
+          end = new Date(currentYear, currentMonth, day - 1);
       }
       return { start, end };
   };
 
   const { start: periodStart, end: periodEnd } = getActivePeriodRange();
   
-  // Header Label Logic
-  const headerMonthLabel = `${periodStart.getDate()} ${periodStart.toLocaleDateString('id-ID', {month:'short'})} - ${periodEnd.getDate()} ${periodEnd.toLocaleDateString('id-ID', {month:'short'})} ${periodEnd.getFullYear()}`;
+  // SAFE HEADER LABEL
+  let headerMonthLabel = "Loading...";
+  try {
+      headerMonthLabel = `${periodStart.getDate()} ${periodStart.toLocaleDateString('id-ID', {month:'short'})} - ${periodEnd.getDate()} ${periodEnd.toLocaleDateString('id-ID', {month:'short'})} ${periodEnd.getFullYear()}`;
+  } catch (e) {
+      headerMonthLabel = "Periode Aktif";
+  }
 
   // Filter Expenses by Active Period
   const activePeriodExpenses = useMemo(() => {
     if (viewArchiveData) return viewArchiveData.expenses;
     return expenses.filter(e => {
+        if (!e.date) return false;
         const d = new Date(e.date);
         const checkDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         const pStart = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
@@ -330,7 +430,6 @@ const SapiFinanceApp = () => {
 
   // Derived Values
   const activeBudget = viewArchiveData ? viewArchiveData.budget : budget;
-  const activeExpenses = viewArchiveData ? viewArchiveData.expenses : expenses; 
   const activeCategoryBudgets = viewArchiveData ? viewArchiveData.categoryBudgets : categoryBudgets;
   const totalExpenses = activePeriodExpenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
   const balance = activeBudget - totalExpenses;
@@ -419,7 +518,7 @@ const SapiFinanceApp = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Mood
+  // Mood Logic
   let cowMood = 'normal';
   let cowMessage = 'Moo~ Aman nih !';
   let appBg = currentTheme.bgSoft;
@@ -627,7 +726,7 @@ const SapiFinanceApp = () => {
   };
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
-  const exportToExcel = async () => { /* ... Excel logic preserved ... */ if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat..."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
+  const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat..."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
   const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
   const handleFileImport = (e) => { /* ... Import logic preserved ... */ };
 
@@ -879,8 +978,14 @@ const SapiFinanceApp = () => {
                             .filter(e => e.date === row.date)
                             .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
                         
-                        const dateObj = new Date(row.date);
-                        const dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                        // Prevent invalid date error
+                        let dateLabel = "Tanggal Tidak Valid";
+                        if (row.date) {
+                            try {
+                                const dateObj = new Date(row.date);
+                                dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                            } catch (e) {}
+                        }
 
                         dailyTotalElement = (
                             <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
