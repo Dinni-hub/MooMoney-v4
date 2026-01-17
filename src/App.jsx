@@ -104,7 +104,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
             
-            {/* 🔥 Tetesan Air Keringat (Kecil & Di Dahi) */}
+            {/* Tetesan Air Keringat (Kecil & Di Dahi) */}
             <path d="M135 40 Q 145 55 145 62 A 10 10 0 1 1 125 62 Q 125 55 135 40 Z" fill="#3b82f6" opacity="0.9" />
             <path d="M132 55 Q 133 52 135 55" stroke="#fff" strokeWidth="2" fill="none" opacity="0.7" />
           </>
@@ -917,7 +917,7 @@ const SapiFinanceApp = () => {
                         budget: 0, // Default 0 budget for new historical import
                         categoryBudgets: { ...categoryBudgets }, // Inherit structure
                         expenses: expenseList,
-                        totalExpenses: totalAmt,
+                        totalAmt: totalAmt,
                         balance: 0 - totalAmt
                     };
                     setArchives(prev => [newArchive, ...prev]);
@@ -1182,7 +1182,15 @@ const SapiFinanceApp = () => {
                 {filteredExpenses.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="p-8 text-center text-gray-400 italic text-sm">
-                      {filterCategory ? `Belum ada pengeluaran di kategori ${filterCategory}` : 'Belum ada pengeluaran. Sapi senang! 整'}
+                      {filterCategory ? (
+                         `Belum ada pengeluaran di kategori ${filterCategory}`
+                      ) : (
+                         <div className="flex flex-col items-center gap-3">
+                           <p>Belum ada pengeluaran. Sapi senang!</p>
+                           {/* Menggunakan CowAvatar happy sebagai pengganti simbol */}
+                           <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
+                         </div>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -1261,15 +1269,6 @@ const SapiFinanceApp = () => {
                   })
                 )}
               </tbody>
-              <tfoot className="bg-gray-50 font-bold text-gray-700">
-                 <tr>
-                    <td colSpan="5" className="p-1 md:p-4 text-right uppercase text-[10px] md:text-xs tracking-wider text-gray-500">Total</td>
-                   <td className={`p-1 md:p-4 text-right text-[10px] md:text-lg ${isOverBudget ? 'text-red-600' : currentTheme.text}`}>
-                     {formatRupiah(totalExpenses)}
-                   </td>
-                   <td></td>
-                 </tr>
-              </tfoot>
              </table>
           </div>
         </div>
