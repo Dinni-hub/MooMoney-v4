@@ -104,7 +104,7 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
             
-            {/* 🔥 Tetesan Air Keringat (Diperbaiki: Kecil & Posisi di Dahi) */}
+            {/* 🔥 Tetesan Air Keringat (Kecil & Di Dahi) */}
             <path d="M135 40 Q 145 55 145 62 A 10 10 0 1 1 125 62 Q 125 55 135 40 Z" fill="#3b82f6" opacity="0.9" />
             <path d="M132 55 Q 133 52 135 55" stroke="#fff" strokeWidth="2" fill="none" opacity="0.7" />
           </>
@@ -377,9 +377,15 @@ const SapiFinanceApp = () => {
     });
   }, [visibleBudgetCats, activeCategoryBudgets, expenseByCategory, viewArchiveData]);
   const filteredExpenses = useMemo(() => {
-    if (!filterCategory) return activeExpenses;
-    return activeExpenses.filter(e => e.category === filterCategory);
+    // 1. FILTER
+    let result = activeExpenses;
+    if (filterCategory) {
+      result = activeExpenses.filter(e => e.category === filterCategory);
+    }
+    // 2. SORT (Newest Date First) to ensure grouping works
+    return [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [activeExpenses, filterCategory]);
+
   // --- EFFECTS ---
   // Fix: Only trigger auto-archive if stored month is strictly in the PAST.
   const hasCheckedRef = useRef(false);
@@ -1180,48 +1186,58 @@ const SapiFinanceApp = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredExpenses.map((row, index) => (
-                    <tr key={row.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
-                      <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
-                        <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
-                      </td>
-                      <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
-                        <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
-                       </td>
-                      <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
-                          <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[8px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
-                        </div>
-                      </td>
-                      <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
-                         <div className="flex gap-1 md:gap-2 items-center">
-                          {row.isCustomCategory && !viewArchiveData ? (
-                             <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
-                          ) : (
-                             <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
-                                <option value="">Pilih</option>
-                                 {categories.map((cat) => (
-                                  <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                             </select>
-                          )}
-                          <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik sendiri"}>
-                            {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
+                  filteredExpenses.map((row, index) => {
+                    const showSpacer = index > 0 && row.date !== filteredExpenses[index - 1].date;
+                    return (
+                    <React.Fragment key={row.id}>
+                      {showSpacer && (
+                        <tr>
+                          <td colSpan="7" className="h-6 bg-transparent border-none"></td>
+                        </tr>
+                      )}
+                      <tr className="hover:bg-gray-50 transition-colors group">
+                        <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
+                          <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
+                          <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
+                            <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[8px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
+                          </div>
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
+                          <div className="flex gap-1 md:gap-2 items-center">
+                            {row.isCustomCategory && !viewArchiveData ? (
+                              <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
+                            ) : (
+                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
+                                  <option value="">Pilih</option>
+                                  {categories.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                              </select>
+                            )}
+                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik sendiri"}>
+                              {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
+                            </button>
+                          </div>
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[5]}`}>
+                          <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
+                        </td>
+                        <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
+                          <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
+                            <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
                           </button>
-                        </div>
-                      </td>
-                      <td className={`p-1 md:p-2 ${currentTheme.table.cell[5]}`}>
-                        <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
-                      </td>
-                      <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
-                         <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
-                          <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
               <tfoot className="bg-gray-50 font-bold text-gray-700">
