@@ -391,7 +391,6 @@ const SapiFinanceApp = () => {
       const currentMonth = today.getMonth(); 
       const currentDay = today.getDate();
       
-      // SAFETY: Ensure cutoffDay is integer
       const day = parseInt(cutoffDay) || 1;
 
       let start, end;
@@ -727,8 +726,86 @@ const SapiFinanceApp = () => {
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
   const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat..."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
+  
+  // FIX: MOBILE IMPORT LABEL
+  const handleFileImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!window.XLSX) { alert("Sistem Excel belum siap. Coba lagi sebentar."); return; }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const wb = window.XLSX.read(data, { type: 'array' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const dataJson = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+        let headerIndex = -1;
+        for(let i=0; i<Math.min(dataJson.length, 20); i++) {
+            const rowStr = dataJson[i] ? dataJson[i].join(' ').toLowerCase() : '';
+            if (rowStr.includes('tanggal') && rowStr.includes('jumlah')) { headerIndex = i; break; }
+        }
+        if (headerIndex === -1) { alert("Format file tidak dikenali. Pastikan menggunakan file Excel dari MooMoney."); return; }
+        const headers = dataJson[headerIndex];
+        const rows = dataJson.slice(headerIndex + 1);
+        const dateIdx = headers.indexOf('Tanggal');
+        const itemIdx = headers.indexOf('Deskripsi');
+        const qtyIdx = headers.indexOf('Qty');
+        const catIdx = headers.indexOf('Kategori');
+        const amtIdx = headers.indexOf('Jumlah');
+        if (dateIdx === -1 || itemIdx === -1 || amtIdx === -1) { alert("Kolom penting (Tanggal, Deskripsi, Jumlah) tidak ditemukan."); return; }
+        const groupedExpenses = {};
+        rows.forEach((row) => {
+            if (!row[dateIdx]) return;
+            const rawQtyStr = row[qtyIdx] || "1";
+            let qty = 1, unit = '-';
+            if (typeof rawQtyStr === 'string') {
+                const qtyMatch = rawQtyStr.match(/^([\d\.,]+)\s*(.*)$/);
+                if (qtyMatch) { qty = parseFloat(qtyMatch[1].replace(',', '.')) || 1; unit = qtyMatch[2] ? qtyMatch[2].trim() : '-'; }
+            } else if (typeof rawQtyStr === 'number') { qty = rawQtyStr; }
+            let amount = 0;
+            if (typeof row[amtIdx] === 'number') { amount = row[amtIdx]; } else { amount = parseFloat(String(row[amtIdx]||0).replace(/[^\d]/g, '')) || 0; }
+            let dateStr = row[dateIdx];
+            if (typeof dateStr === 'number') { const jsDate = new Date(Math.round((dateStr - 25569)*86400*1000)); if (!isNaN(jsDate)) { dateStr = jsDate.toISOString().split('T')[0]; } else { dateStr = new Date().toISOString().split('T')[0]; } }
+            if (!dateStr || amount <= 0) return;
+            const monthKey = dateStr.slice(0, 7);
+            if (!groupedExpenses[monthKey]) { groupedExpenses[monthKey] = []; }
+            groupedExpenses[monthKey].push({ id: Date.now() + Math.random(), date: dateStr, item: row[itemIdx] || 'Item Impor', category: row[catIdx] || 'Lainnya', amount: amount, qty: qty, unit: unit || '-', isCustomCategory: false });
+        });
+        const activeMonth = viewArchiveData ? viewArchiveData.isoDate : lastActiveMonth;
+        let addedToCurrent = 0, addedToArchive = 0, createdArchive = 0;
+        Object.keys(groupedExpenses).forEach(monthKey => {
+            const expenseList = groupedExpenses[monthKey];
+            if (monthKey === activeMonth) {
+                if (viewArchiveData) { updateArchive({ expenses: [...viewArchiveData.expenses, ...expenseList] }); } 
+                else { setExpenses(prev => [...prev, ...expenseList]); }
+                addedToCurrent += expenseList.length;
+            } else {
+                const existingArchive = archives.find(a => a.isoDate === monthKey);
+                if (existingArchive) {
+                    const updatedExpenses = [...existingArchive.expenses, ...expenseList];
+                    const newTotal = updatedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+                    const newArchiveData = { ...existingArchive, expenses: updatedExpenses, totalExpenses: newTotal, balance: existingArchive.budget - newTotal };
+                    setArchives(prev => prev.map(a => a.id === existingArchive.id ? newArchiveData : a));
+                    addedToArchive += expenseList.length;
+                } else {
+                    const dateObj = new Date(monthKey + "-01");
+                    const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                    const totalAmt = expenseList.reduce((acc, curr) => acc + curr.amount, 0);
+                    const newArchive = { id: Date.now() + Math.random(), period: monthLabel, isoDate: monthKey, budget: 0, categoryBudgets: { ...categoryBudgets }, expenses: expenseList, totalExpenses: totalAmt, balance: 0 - totalAmt };
+                    setArchives(prev => [newArchive, ...prev]);
+                    createdArchive += 1;
+                }
+            }
+        });
+        alert(`Impor Selesai!\n- Ditambahkan ke Tampilan Ini: ${addedToCurrent} item\n- Ditambahkan ke Arsip Lama: ${addedToArchive} item\n- Arsip Baru Dibuat: ${createdArchive}`);
+      } catch (err) { console.error(err); alert("Gagal membaca file Excel. Pastikan file tidak rusak."); }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = null;
+  };
+  
   const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
-  const handleFileImport = (e) => { /* ... Import logic preserved ... */ };
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
@@ -738,7 +815,15 @@ const SapiFinanceApp = () => {
       <SummaryModal isOpen={showSummary} onClose={() => setShowSummary(false)} totalBudget={activeBudget} totalExpenses={totalExpenses} balance={balance} theme={currentTheme} />
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} archives={archives} onLoadArchive={handleLoadArchive} onDeleteArchive={handleDeleteArchive} currentMonthLabel={headerMonthLabel} />
 
-      <input type="file" ref={fileInputRef} onChange={handleFileImport} accept=".xlsx, .xls" className="hidden" />
+      {/* Hidden File Input for Import - CRITICAL: HAS ID FOR MOBILE LABEL */}
+      <input 
+        id="import-excel-input"
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileImport} 
+        accept=".xlsx, .xls" 
+        className="hidden" 
+      />
 
       <div className={`w-full px-4 py-3 md:p-4 shadow-md transition-colors duration-300 ${headerBg} text-white sticky top-0 z-30`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -752,13 +837,12 @@ const SapiFinanceApp = () => {
           <div className="flex items-center gap-2">
             {viewArchiveData && ( <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> <ArrowLeft size={16} /> KEMBALI </button> )}
             
-            {/* BUTTONS (Visible on both Desktop & Mobile now for important ones) */}
+            {/* BUTTONS (Visible on both Desktop & Mobile) */}
             <div className="flex gap-2">
                 <button onClick={() => setShowHistory(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Riwayat"><History size={18} /></button>
-                {/* 🔥 TOMBOL SETTINGS (GERIGI) SEKARANG ADA DI SINI AGAR TERLIHAT DI HP 🔥 */}
                 <button onClick={() => setShowSettings(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Pengaturan"><Settings size={18} /></button>
                 
-                 {/* 🔥 TOMBOL TEMA (PALETTE) DIKEMBALIKAN 🔥 */}
+                 {/* THEME BUTTON */}
                  <div className="relative">
                     <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Ganti Tema">
                         <Palette size={18} />
@@ -776,14 +860,13 @@ const SapiFinanceApp = () => {
                     )}
                  </div>
 
-                {/* Hidden on mobile to save space, show in hamburger instead */}
+                {/* Desktop Specific */}
                 <button onClick={() => setShowSummary(true)} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Laporan"><FileText size={18} /></button>
                 <button onClick={exportToExcel} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Excel"><Download size={18} /></button>
-                {/* 🔥 TOMBOL IMPORT SUDAH DIKEMBALIKAN KE SINI 🔥 */}
                 <button onClick={handleImportClick} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Import Excel"><Upload size={18} /></button>
             </div>
 
-            {/* Mobile Hamburger Menu (For extra features) */}
+            {/* Mobile Hamburger Menu */}
             <div className="md:hidden relative" ref={mobileMenuRef}>
                 <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-white">
                     <Menu size={24} />
@@ -794,18 +877,8 @@ const SapiFinanceApp = () => {
                          <div className="flex flex-col gap-1">
                             <button onClick={() => { setShowSummary(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
                             <button onClick={() => { exportToExcel(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
-                            <button onClick={() => { handleImportClick(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Upload size={16}/> Import Excel</button>
-                            
-                            {!viewArchiveData && (
-                                <div className="border-t border-gray-100 my-1 pt-1">
-                                    <p className="px-3 py-1 text-xs font-bold text-gray-400">Tema</p>
-                                    <div className="grid grid-cols-5 gap-1 px-2">
-                                         {Object.entries(THEMES).map(([key, theme]) => (
-                                            <button key={key} onClick={() => { setThemeKey(key); }} className={`w-6 h-6 rounded-full ${theme.bg} border-2 ${themeKey === key ? 'border-gray-600' : 'border-transparent'}`} title={theme.name} />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            {/* MOBILE IMPORT: USE LABEL FOR NATIVE FILE TRIGGER */}
+                            <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"><Upload size={16}/> Import Excel</label>
                          </div>
                     </div>
                 )}
@@ -815,6 +888,7 @@ const SapiFinanceApp = () => {
         </div>
       </div>
       
+      {/* ... (Rest of the UI remains the same) ... */}
       <div className="max-w-7xl mx-auto p-3 md:p-6 lg:p-8">
         {viewArchiveData && ( <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded shadow-sm"> <p className="font-bold flex items-center gap-2"><History size={18}/> Mode Arsip: {viewArchiveData.period}</p> <p className="text-xs">Data masa lalu (Dapat diedit).</p> </div> )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
