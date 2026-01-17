@@ -1028,8 +1028,11 @@ const SapiFinanceApp = () => {
               <span className="inline sm:hidden">Daftar</span>
              </h3>
              {/* --- FIX: TOMBOL TAMBAH BARIS KEMBALI MUNCUL DI HP --- */}
-             <button onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95 cursor-pointer`}>
-               <Plus size={14} className="md:w-4 md:h-4" /> <span className="inline">Tambah</span><span className="hidden sm:inline"> Baris</span>
+             <button
+               onClick={handleAddRow}
+               className={`${currentTheme.bg} ${currentTheme.hover} text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-transform active:scale-95 z-10 relative`}
+             >
+               <Plus size={16} /> Tambah Baris
              </button>
            </div>
            
@@ -1205,15 +1208,6 @@ const SapiFinanceApp = () => {
         </div>
 
       </div>
-
-      {/* FLOATING ACTION BUTTON FOR MOBILE ADD ROW (Opsional, tetap ada sebagai cadangan) */}
-      <button 
-        onClick={handleAddRow} 
-        className={`md:hidden fixed bottom-6 right-6 ${currentTheme.bg} text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-90 transition-transform`}
-        aria-label="Tambah Baris"
-      >
-        <Plus size={32} />
-      </button>
 
     </div>
   );
