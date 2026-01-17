@@ -8,7 +8,7 @@ const useLocalStorage = (key, initialValue) => {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(error);
+      console.error("Storage Error:", error);
       return initialValue;
     }
   });
@@ -19,7 +19,7 @@ const useLocalStorage = (key, initialValue) => {
       setStoredValue(valueToStore);
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
-      console.error(error);
+      console.error("Storage Set Error:", error);
     }
   };
 
@@ -340,7 +340,9 @@ const SapiFinanceApp = () => {
       const currentYear = today.getFullYear();
       const currentMonth = today.getMonth(); 
       const currentDay = today.getDate();
+      
       const day = parseInt(cutoffDay) || 1;
+
       let start, end;
       if (currentDay >= day) {
           start = new Date(currentYear, currentMonth, day);
@@ -652,18 +654,30 @@ const SapiFinanceApp = () => {
 
   // --- ADD ROW FIX: SIMPLE & DIRECT ---
   const handleAddRow = () => { 
-      const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
-      const newId = targetList.length > 0 ? Math.max(...targetList.map(e => e.id)) + 1 : 1; 
+      // 1. Determine Target List (Archive or Current)
+      const isArchive = !!viewArchiveData;
+      const currentList = isArchive ? viewArchiveData.expenses : expenses;
+
+      // 2. Generate New ID
+      const newId = currentList.length > 0 ? Math.max(...currentList.map(e => e.id)) + 1 : 1; 
+      
+      // 3. Determine Date (Today or Latest in List)
       const today = new Date().toISOString().slice(0, 10);
       let defaultDate = today;
-      if (targetList.length > 0) { const maxDate = targetList.reduce((max, p) => p.date > max ? p.date : max, targetList[0].date); defaultDate = maxDate; }
+      if (currentList.length > 0) { 
+          // Find max date in current list to keep order consistent
+          const maxDate = currentList.reduce((max, p) => p.date > max ? p.date : max, currentList[0].date); 
+          defaultDate = maxDate; 
+      }
+
+      // 4. Create New Row Object
       const newRow = { id: newId, date: defaultDate, item: '', category: 'Lainnya', amount: 0, qty: 1, unit: '-', isCustomCategory: false };
       
-      // FIX: Ensure setExpenses is called correctly for top insertion
-      if(viewArchiveData) { 
-          updateArchive({ expenses: [newRow, ...targetList] }); 
+      // 5. Update State (Force Prepend)
+      if(isArchive) { 
+          updateArchive({ expenses: [newRow, ...currentList] }); 
       } else { 
-          setExpenses([newRow, ...targetList]); 
+          setExpenses(prev => [newRow, ...prev]); 
       }
   };
 
@@ -681,8 +695,86 @@ const SapiFinanceApp = () => {
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
   const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat..."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
+  
+  // FIX: MOBILE IMPORT LABEL & REF CLICK
   const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
-  const handleFileImport = (e) => { /* ... Import logic preserved ... */ };
+  
+  const handleFileImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!window.XLSX) { alert("Sistem Excel belum siap. Coba lagi sebentar."); return; }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const wb = window.XLSX.read(data, { type: 'array' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const dataJson = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+        let headerIndex = -1;
+        for(let i=0; i<Math.min(dataJson.length, 20); i++) {
+            const rowStr = dataJson[i] ? dataJson[i].join(' ').toLowerCase() : '';
+            if (rowStr.includes('tanggal') && rowStr.includes('jumlah')) { headerIndex = i; break; }
+        }
+        if (headerIndex === -1) { alert("Format file tidak dikenali. Pastikan menggunakan file Excel dari MooMoney."); return; }
+        const headers = dataJson[headerIndex];
+        const rows = dataJson.slice(headerIndex + 1);
+        const dateIdx = headers.indexOf('Tanggal');
+        const itemIdx = headers.indexOf('Deskripsi');
+        const qtyIdx = headers.indexOf('Qty');
+        const catIdx = headers.indexOf('Kategori');
+        const amtIdx = headers.indexOf('Jumlah');
+        if (dateIdx === -1 || itemIdx === -1 || amtIdx === -1) { alert("Kolom penting (Tanggal, Deskripsi, Jumlah) tidak ditemukan."); return; }
+        const groupedExpenses = {};
+        rows.forEach((row) => {
+            if (!row[dateIdx]) return;
+            const rawQtyStr = row[qtyIdx] || "1";
+            let qty = 1, unit = '-';
+            if (typeof rawQtyStr === 'string') {
+                const qtyMatch = rawQtyStr.match(/^([\d\.,]+)\s*(.*)$/);
+                if (qtyMatch) { qty = parseFloat(qtyMatch[1].replace(',', '.')) || 1; unit = qtyMatch[2] ? qtyMatch[2].trim() : '-'; }
+            } else if (typeof rawQtyStr === 'number') { qty = rawQtyStr; }
+            let amount = 0;
+            if (typeof row[amtIdx] === 'number') { amount = row[amtIdx]; } else { amount = parseFloat(String(row[amtIdx]||0).replace(/[^\d]/g, '')) || 0; }
+            let dateStr = row[dateIdx];
+            if (typeof dateStr === 'number') { const jsDate = new Date(Math.round((dateStr - 25569)*86400*1000)); if (!isNaN(jsDate)) { dateStr = jsDate.toISOString().split('T')[0]; } else { dateStr = new Date().toISOString().split('T')[0]; } }
+            if (!dateStr || amount <= 0) return;
+            const monthKey = dateStr.slice(0, 7);
+            if (!groupedExpenses[monthKey]) { groupedExpenses[monthKey] = []; }
+            groupedExpenses[monthKey].push({ id: Date.now() + Math.random(), date: dateStr, item: row[itemIdx] || 'Item Impor', category: row[catIdx] || 'Lainnya', amount: amount, qty: qty, unit: unit || '-', isCustomCategory: false });
+        });
+        const activeMonth = viewArchiveData ? viewArchiveData.isoDate : lastActiveMonth;
+        let addedToCurrent = 0, addedToArchive = 0, createdArchive = 0;
+        Object.keys(groupedExpenses).forEach(monthKey => {
+            const expenseList = groupedExpenses[monthKey];
+            if (monthKey === activeMonth) {
+                if (viewArchiveData) { updateArchive({ expenses: [...viewArchiveData.expenses, ...expenseList] }); } 
+                else { setExpenses(prev => [...prev, ...expenseList]); }
+                addedToCurrent += expenseList.length;
+            } else {
+                const existingArchive = archives.find(a => a.isoDate === monthKey);
+                if (existingArchive) {
+                    const updatedExpenses = [...existingArchive.expenses, ...expenseList];
+                    const newTotal = updatedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+                    const newArchiveData = { ...existingArchive, expenses: updatedExpenses, totalExpenses: newTotal, balance: existingArchive.budget - newTotal };
+                    setArchives(prev => prev.map(a => a.id === existingArchive.id ? newArchiveData : a));
+                    addedToArchive += expenseList.length;
+                } else {
+                    const dateObj = new Date(monthKey + "-01");
+                    const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                    const totalAmt = expenseList.reduce((acc, curr) => acc + curr.amount, 0);
+                    const newArchive = { id: Date.now() + Math.random(), period: monthLabel, isoDate: monthKey, budget: 0, categoryBudgets: { ...categoryBudgets }, expenses: expenseList, totalExpenses: totalAmt, balance: 0 - totalAmt };
+                    setArchives(prev => [newArchive, ...prev]);
+                    createdArchive += 1;
+                }
+            }
+        });
+        alert(`Impor Selesai!\n- Ditambahkan ke Tampilan Ini: ${addedToCurrent} item\n- Ditambahkan ke Arsip Lama: ${addedToArchive} item\n- Arsip Baru Dibuat: ${createdArchive}`);
+      } catch (err) { console.error(err); alert("Gagal membaca file Excel. Pastikan file tidak rusak."); }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = null;
+  };
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
@@ -729,6 +821,7 @@ const SapiFinanceApp = () => {
 
                 <button onClick={() => setShowSummary(true)} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Laporan"><FileText size={18} /></button>
                 <button onClick={exportToExcel} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Excel"><Download size={18} /></button>
+                {/* Desktop Import Button */}
                 <button onClick={handleImportClick} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Import Excel"><Upload size={18} /></button>
             </div>
 
@@ -742,7 +835,19 @@ const SapiFinanceApp = () => {
                          <div className="flex flex-col gap-1">
                             <button onClick={() => { setShowSummary(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
                             <button onClick={() => { exportToExcel(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
+                            {/* MOBILE IMPORT: USING LABEL TO TRIGGER FILE INPUT DIRECTLY (Fixes Mobile Issue) */}
                             <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"><Upload size={16}/> Import Excel</label>
+                            
+                            {!viewArchiveData && (
+                                <div className="border-t border-gray-100 my-1 pt-1">
+                                    <p className="px-3 py-1 text-xs font-bold text-gray-400">Tema</p>
+                                    <div className="grid grid-cols-5 gap-1 px-2">
+                                         {Object.entries(THEMES).map(([key, theme]) => (
+                                            <button key={key} onClick={() => { setThemeKey(key); }} className={`w-6 h-6 rounded-full ${theme.bg} border-2 ${themeKey === key ? 'border-gray-600' : 'border-transparent'}`} title={theme.name} />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                          </div>
                     </div>
                 )}
