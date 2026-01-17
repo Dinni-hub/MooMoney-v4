@@ -758,6 +758,24 @@ const SapiFinanceApp = () => {
                 {/* 🔥 TOMBOL SETTINGS (GERIGI) SEKARANG ADA DI SINI AGAR TERLIHAT DI HP 🔥 */}
                 <button onClick={() => setShowSettings(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Pengaturan"><Settings size={18} /></button>
                 
+                 {/* 🔥 TOMBOL TEMA (PALETTE) DIKEMBALIKAN 🔥 */}
+                 <div className="relative">
+                    <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Ganti Tema">
+                        <Palette size={18} />
+                    </button>
+                    {showThemeSelector && (
+                        <div className="absolute right-0 top-12 bg-white text-gray-800 rounded-xl shadow-xl p-3 w-40 z-50 animate-in fade-in slide-in-from-top-2 border border-gray-100">
+                            <div className="grid grid-cols-1 gap-1">
+                                {Object.entries(THEMES).map(([key, theme]) => (
+                                    <button key={key} onClick={() => { setThemeKey(key); setShowThemeSelector(false); }} className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${themeKey === key ? 'font-bold bg-gray-50' : ''}`}>
+                                        <div className={`w-4 h-4 rounded-full ${theme.bg}`}></div> {theme.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                 </div>
+
                 {/* Hidden on mobile to save space, show in hamburger instead */}
                 <button onClick={() => setShowSummary(true)} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Laporan"><FileText size={18} /></button>
                 <button onClick={exportToExcel} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Excel"><Download size={18} /></button>
