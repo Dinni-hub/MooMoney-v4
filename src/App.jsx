@@ -346,7 +346,32 @@ const SapiFinanceApp = () => {
     orange: { base: 'orange', hex: '#f97316', name: 'Oranye', bg: 'bg-orange-500', bgSoft: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-400', hover: 'hover:bg-orange-600', light: 'bg-orange-100', icon: 'text-orange-400', ring: 'focus:border-orange-500', table: { header: ['bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500', 'bg-orange-600', 'bg-orange-700', 'bg-orange-800'], cell: ['bg-orange-50', 'bg-orange-100', 'bg-orange-200', 'bg-orange-300', 'bg-orange-400', 'bg-orange-500', 'bg-orange-600'] } },
   };
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
-  const getCurrentMonthISO = () => new Date().toISOString().slice(0, 7);
+  
+  // --- CORE LOGIC: CUTOFF DATE HANDLING ---
+  // Calculates the specific "Period Key" (YYYY-MM) a date belongs to based on cutoff
+  const getPeriodKey = (dateStr, cutoff) => {
+    if (!dateStr) return new Date().toISOString().slice(0, 7);
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    let month = d.getMonth(); // 0-11
+    let year = d.getFullYear();
+    
+    // If day is before cutoff, it belongs to the PREVIOUS billing period
+    if (day < cutoff) {
+        month--;
+        if (month < 0) {
+            month = 11;
+            year--;
+        }
+    }
+    // Return key based on the START of the period (e.g., "2026-01" means the period starting Jan 2026)
+    return new Date(year, month, 1).toISOString().slice(0, 7);
+  };
+
+  const getCurrentPeriodKey = (cutoff) => {
+      const today = new Date();
+      return getPeriodKey(today.toISOString().split('T')[0], cutoff);
+  };
 
   // --- STATE ---
   const [budget, setBudget] = useLocalStorage('moomoney_budget', 2000000);
@@ -354,7 +379,8 @@ const SapiFinanceApp = () => {
   const [themeKey, setThemeKey] = useLocalStorage('moomoney_theme', 'pink');
   const [categories, setCategories] = useLocalStorage('moomoney_categories', INITIAL_CATEGORIES);
   const [visibleBudgetCats, setVisibleBudgetCats] = useLocalStorage('moomoney_visibleBudgets', []);
-  const [lastActiveMonth, setLastActiveMonth, isMonthLoaded] = useLocalStorage('moomoney_lastMonth', getCurrentMonthISO());
+  // IMPORTANT: lastActiveMonth now stores the PERIOD KEY (YYYY-MM), not calendar month
+  const [lastActiveMonth, setLastActiveMonth, isMonthLoaded] = useLocalStorage('moomoney_lastMonth', new Date().toISOString().slice(0, 7));
   const [archives, setArchives] = useLocalStorage('moomoney_archives', []);
   const [categoryBudgets, setCategoryBudgets] = useLocalStorage('moomoney_categoryBudgets', { 'Kebutuhan Bulanan': 0, 'Kebutuhan Mingguan': 0, 'Buah': 0, 'Snack': 0, 'Tagihan': 0, 'Skincare': 0, 'Kesehatan': 0, 'Sedekah': 0, 'Transportasi': 0, 'Lainnya': 0 });
   const [expenses, setExpenses] = useLocalStorage('moomoney_expenses', [
@@ -381,48 +407,34 @@ const SapiFinanceApp = () => {
   const [pendingRowId, setPendingRowId] = useState(null);
   const [pendingDateValue, setPendingDateValue] = useState(null);
 
-  // --- HELPER: PERIOD CALCULATION (SAFE MODE) ---
-  const getActivePeriodRange = () => {
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const currentMonth = today.getMonth(); 
-      const currentDay = today.getDate();
-      
-      const day = parseInt(cutoffDay) || 1;
+  // --- HELPER: PERIOD CALCULATION (DISPLAY) ---
+  const getPeriodRangeDisplay = (periodKey) => {
+     const cutoff = parseInt(cutoffDay) || 1;
+     const [yearStr, monthStr] = periodKey.split('-');
+     const year = parseInt(yearStr);
+     const month = parseInt(monthStr) - 1; // 0-indexed
 
-      let start, end;
-      if (currentDay >= day) {
-          start = new Date(currentYear, currentMonth, day);
-          end = new Date(currentYear, currentMonth + 1, day - 1);
-      } else {
-          start = new Date(currentYear, currentMonth - 1, day);
-          end = new Date(currentYear, currentMonth, day - 1);
-      }
-      return { start, end };
+     const start = new Date(year, month, cutoff);
+     const end = new Date(year, month + 1, cutoff - 1);
+     
+     return `${start.getDate()} ${start.toLocaleDateString('id-ID', {month:'short'})} - ${end.getDate()} ${end.toLocaleDateString('id-ID', {month:'short'})} ${end.getFullYear()}`;
   };
 
-  const { start: periodStart, end: periodEnd } = getActivePeriodRange();
-   
-  // SAFE HEADER LABEL
-  let headerMonthLabel = "Loading...";
-  try {
-      headerMonthLabel = `${periodStart.getDate()} ${periodStart.toLocaleDateString('id-ID', {month:'short'})} - ${periodEnd.getDate()} ${periodEnd.toLocaleDateString('id-ID', {month:'short'})} ${periodEnd.getFullYear()}`;
-  } catch (e) {
-      headerMonthLabel = "Periode Aktif";
-  }
+  const headerMonthLabel = viewArchiveData ? viewArchiveData.period : getPeriodRangeDisplay(lastActiveMonth);
 
-  // Filter Expenses by Active Period
+  // --- FILTER EXPENSES BY PERIOD (Active or Archive) ---
   const activePeriodExpenses = useMemo(() => {
     if (viewArchiveData) return viewArchiveData.expenses;
+    
+    // STRICT CUTOFF FILTERING
+    const cutoff = parseInt(cutoffDay) || 1;
+    // We only show expenses that belong to the 'lastActiveMonth' period key
     return expenses.filter(e => {
         if (!e.date) return false;
-        const d = new Date(e.date);
-        const checkDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        const pStart = new Date(periodStart.getFullYear(), periodStart.getMonth(), periodStart.getDate());
-        const pEnd = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), periodEnd.getDate());
-        return checkDate >= pStart && checkDate <= pEnd;
+        const rowPeriodKey = getPeriodKey(e.date, cutoff);
+        return rowPeriodKey === lastActiveMonth;
     });
-  }, [expenses, periodStart, periodEnd, viewArchiveData]);
+  }, [expenses, lastActiveMonth, cutoffDay, viewArchiveData]);
 
   // Derived Values
   const activeBudget = viewArchiveData ? viewArchiveData.budget : budget;
@@ -472,12 +484,15 @@ const SapiFinanceApp = () => {
   const hasCheckedRef = useRef(false);
   useEffect(() => {
     if (!isMonthLoaded || hasCheckedRef.current) return; 
-    const currentISO = getCurrentMonthISO();
-    if (lastActiveMonth && lastActiveMonth < currentISO && !showMonthAlert && !showManualMonthAlert) {
+    const cutoff = parseInt(cutoffDay) || 1;
+    const currentPeriodKey = getCurrentPeriodKey(cutoff);
+    
+    // Check if we have moved to a NEW period based on today's date and cutoff
+    if (lastActiveMonth < currentPeriodKey && !showMonthAlert && !showManualMonthAlert) {
       setShowMonthAlert(true);
     }
     hasCheckedRef.current = true;
-  }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded]);
+  }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded, cutoffDay]);
 
   useEffect(() => {
     if (window.XLSX) return;
@@ -676,9 +691,19 @@ const SapiFinanceApp = () => {
   };
 
   const handleChange = (id, field, value) => {
+    // FIX: Manual Date Change Logic respecting Cutoff
     if (!viewArchiveData && field === 'date' && value) {
-        const inputMonth = value.slice(0, 7);
-        if (inputMonth !== lastActiveMonth) { setPendingMonth(inputMonth); setPendingRowId(id); setPendingDateValue(value); setShowManualMonthAlert(true); return; }
+        const cutoff = parseInt(cutoffDay) || 1;
+        const newPeriodKey = getPeriodKey(value, cutoff);
+        
+        // If the new date makes the item fall into a DIFFERENT period than the active one
+        if (newPeriodKey !== lastActiveMonth) { 
+            setPendingMonth(newPeriodKey); 
+            setPendingRowId(id); 
+            setPendingDateValue(value); 
+            setShowManualMonthAlert(true); 
+            return; 
+        }
     }
     const updateLogic = (row) => {
        if (row.id === id) {
@@ -691,13 +716,15 @@ const SapiFinanceApp = () => {
   };
 
   const handleConfirmManualSwitch = () => {
-    const dateObj = new Date(lastActiveMonth + "-01");
-    const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-    const newArchive = { id: Date.now(), period: monthLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance };
+    const periodLabel = getPeriodRangeDisplay(lastActiveMonth);
+    const newArchive = { id: Date.now(), period: periodLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance };
     setArchives(prev => [newArchive, ...prev]);
     const triggeringRow = expenses.find(e => e.id === pendingRowId) || {};
     const newRow = { id: 1, date: pendingDateValue, item: triggeringRow.item || '', category: triggeringRow.category || 'Lainnya', amount: triggeringRow.amount || 0, qty: triggeringRow.qty || 1, unit: triggeringRow.unit || '-' };
-    setExpenses([newRow]); setLastActiveMonth(pendingMonth); setShowManualMonthAlert(false); setPendingMonth(null); setPendingRowId(null); setPendingDateValue(null);
+    setExpenses([newRow]); 
+    // Set the active month to the NEW period key
+    setLastActiveMonth(pendingMonth); 
+    setShowManualMonthAlert(false); setPendingMonth(null); setPendingRowId(null); setPendingDateValue(null);
   };
 
   const handleAddRow = () => { 
@@ -719,13 +746,22 @@ const SapiFinanceApp = () => {
   const handleLoadArchive = (archivedData) => { setViewArchiveData(archivedData); setShowHistory(false); };
   const handleBackToCurrent = () => { setViewArchiveData(null); };
   const handleArchiveAndReset = () => { 
-      const dateObj = new Date(lastActiveMonth + "-01");
-      const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-      const newArchive = { id: Date.now(), period: monthLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance };
-      setArchives(prev => [newArchive, ...prev]); setExpenses([]); setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); 
+      const periodLabel = getPeriodRangeDisplay(lastActiveMonth);
+      const newArchive = { id: Date.now(), period: periodLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance };
+      setArchives(prev => [newArchive, ...prev]); 
+      setExpenses([]); 
+      // Reset to CURRENT actual period
+      const cutoff = parseInt(cutoffDay) || 1;
+      setLastActiveMonth(getCurrentPeriodKey(cutoff)); 
+      setShowMonthAlert(false); 
   };
   const handleResetData = handleArchiveAndReset; 
-  const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
+  const handleKeepData = () => { 
+      // Update the stored period key to today's period to stop alerting
+      const cutoff = parseInt(cutoffDay) || 1;
+      setLastActiveMonth(getCurrentPeriodKey(cutoff));
+      setShowMonthAlert(false); 
+  };
   const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat... Pastikan internet nyala."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
    
   // --- IMPORT LOGIC: Updated with Cutoff ---
@@ -735,25 +771,6 @@ const SapiFinanceApp = () => {
     if (!window.XLSX) { alert("Sistem Excel belum siap. Coba lagi sebentar."); return; }
     const reader = new FileReader();
     
-    // NEW Helper: Determine Period Key based on Cutoff
-    const getPeriodKey = (dateStr, cutoff) => {
-        const d = new Date(dateStr);
-        const day = d.getDate();
-        let month = d.getMonth(); // 0-11
-        let year = d.getFullYear();
-        
-        // If day is before cutoff, it belongs to PREVIOUS period month
-        if (day < cutoff) {
-            month--;
-            if (month < 0) {
-                month = 11;
-                year--;
-            }
-        }
-        // Construct YYYY-MM based on the START of the period
-        return new Date(year, month, 1).toISOString().slice(0, 7);
-    };
-
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target.result);
@@ -794,23 +811,26 @@ const SapiFinanceApp = () => {
             if (!dateStr || amount <= 0) return;
             
             // USE NEW PERIOD LOGIC HERE
-            const monthKey = getPeriodKey(dateStr, cutoff);
+            const periodKey = getPeriodKey(dateStr, cutoff);
             
-            if (!groupedExpenses[monthKey]) { groupedExpenses[monthKey] = []; }
-            groupedExpenses[monthKey].push({ id: Date.now() + Math.random(), date: dateStr, item: row[itemIdx] || 'Item Impor', category: row[catIdx] || 'Lainnya', amount: amount, qty: qty, unit: unit || '-', isCustomCategory: false });
+            if (!groupedExpenses[periodKey]) { groupedExpenses[periodKey] = []; }
+            groupedExpenses[periodKey].push({ id: Date.now() + Math.random(), date: dateStr, item: row[itemIdx] || 'Item Impor', category: row[catIdx] || 'Lainnya', amount: amount, qty: qty, unit: unit || '-', isCustomCategory: false });
         });
 
-        const activeMonth = viewArchiveData ? viewArchiveData.isoDate : lastActiveMonth;
+        const activePeriod = viewArchiveData ? viewArchiveData.isoDate : lastActiveMonth;
         let addedToCurrent = 0, addedToArchive = 0, createdArchive = 0;
         
-        Object.keys(groupedExpenses).forEach(monthKey => {
-            const expenseList = groupedExpenses[monthKey];
-            if (monthKey === activeMonth) {
+        Object.keys(groupedExpenses).forEach(periodKey => {
+            const expenseList = groupedExpenses[periodKey];
+            
+            // If the imported expenses belong to the ACTIVE period
+            if (periodKey === activePeriod) {
                 if (viewArchiveData) { updateArchive({ expenses: [...viewArchiveData.expenses, ...expenseList] }); } 
                 else { setExpenses(prev => [...prev, ...expenseList]); }
                 addedToCurrent += expenseList.length;
             } else {
-                const existingArchive = archives.find(a => a.isoDate === monthKey);
+                // Check if an archive exists for this periodKey
+                const existingArchive = archives.find(a => a.isoDate === periodKey);
                 if (existingArchive) {
                     const updatedExpenses = [...existingArchive.expenses, ...expenseList];
                     const newTotal = updatedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
@@ -818,10 +838,10 @@ const SapiFinanceApp = () => {
                     setArchives(prev => prev.map(a => a.id === existingArchive.id ? newArchiveData : a));
                     addedToArchive += expenseList.length;
                 } else {
-                    const dateObj = new Date(monthKey + "-01");
-                    const monthLabel = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                    // Create new archive for this period
+                    const periodLabel = getPeriodRangeDisplay(periodKey);
                     const totalAmt = expenseList.reduce((acc, curr) => acc + curr.amount, 0);
-                    const newArchive = { id: Date.now() + Math.random(), period: monthLabel, isoDate: monthKey, budget: 0, categoryBudgets: { ...categoryBudgets }, expenses: expenseList, totalExpenses: totalAmt, balance: 0 - totalAmt };
+                    const newArchive = { id: Date.now() + Math.random(), period: periodLabel, isoDate: periodKey, budget: 0, categoryBudgets: { ...categoryBudgets }, expenses: expenseList, totalExpenses: totalAmt, balance: 0 - totalAmt };
                     setArchives(prev => [newArchive, ...prev]);
                     createdArchive += 1;
                 }
@@ -839,8 +859,8 @@ const SapiFinanceApp = () => {
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} cutoffDay={cutoffDay} setCutoffDay={setCutoffDay} />
-      <NewMonthModal isOpen={showMonthAlert} onClose={handleKeepData} onExport={exportToExcel} onReset={handleArchiveAndReset} monthName={new Date().toLocaleDateString('id-ID', { month: 'long' })} />
-      <ManualMonthChangeModal isOpen={showManualMonthAlert} onClose={() => setShowManualMonthAlert(false)} onConfirm={handleConfirmManualSwitch} newMonthName={pendingMonth ? new Date(pendingMonth + "-01").toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : ''} />
+      <NewMonthModal isOpen={showMonthAlert} onClose={handleKeepData} onExport={exportToExcel} onReset={handleArchiveAndReset} monthName={getPeriodRangeDisplay(getCurrentPeriodKey(cutoffDay))} />
+      <ManualMonthChangeModal isOpen={showManualMonthAlert} onClose={() => setShowManualMonthAlert(false)} onConfirm={handleConfirmManualSwitch} newMonthName={pendingMonth ? getPeriodRangeDisplay(pendingMonth) : ''} />
       <SummaryModal isOpen={showSummary} onClose={() => setShowSummary(false)} totalBudget={activeBudget} totalExpenses={totalExpenses} balance={balance} theme={currentTheme} />
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} archives={archives} onLoadArchive={handleLoadArchive} onDeleteArchive={handleDeleteArchive} currentMonthLabel={headerMonthLabel} />
 
