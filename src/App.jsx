@@ -28,7 +28,7 @@ const useLocalStorage = (key, initialValue) => {
 
 // --- COMPONENTS ---
 
-const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "main" }) => {
+const CowAvatar = ({ mood, className = "w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-60 lg:h-60", uniqueId = "main" }) => {
   const isAngry = mood === 'angry';
   const isWarning = mood === 'warning';
   const isHappy = mood === 'happy'; 
