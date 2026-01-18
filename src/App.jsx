@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, Upload, Menu, Settings } from 'lucide-react';
+import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, Upload, Menu, Settings, RefreshCcw } from 'lucide-react';
 
 // --- CUSTOM HOOK: LOCAL STORAGE SYNC ---
 const useLocalStorage = (key, initialValue) => {
@@ -348,7 +348,6 @@ const SapiFinanceApp = () => {
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
   
   // --- CORE LOGIC: DATE & CUTOFF HANDLING ---
-  // Helper to format date strictly as YYYY-MM-DD in LOCAL TIME
   const toLocalDateString = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -356,23 +355,16 @@ const SapiFinanceApp = () => {
     return `${y}-${m}-${d}`;
   };
 
-  // Calculates the specific "Period Key" (YYYY-MM) a date belongs to based on cutoff
   const getPeriodKey = (dateStr, cutoff) => {
     if (!dateStr) return new Date().toISOString().slice(0, 7);
     const d = new Date(dateStr);
     const day = d.getDate();
     let month = d.getMonth(); // 0-11
     let year = d.getFullYear();
-    
-    // If day is before cutoff, it belongs to the PREVIOUS billing period
     if (day < cutoff) {
         month--;
-        if (month < 0) {
-            month = 11;
-            year--;
-        }
+        if (month < 0) { month = 11; year--; }
     }
-    // Return key based on the START of the period
     const startOfPeriod = new Date(year, month, 1);
     const mStr = String(startOfPeriod.getMonth() + 1).padStart(2, '0');
     const yStr = startOfPeriod.getFullYear();
@@ -389,10 +381,7 @@ const SapiFinanceApp = () => {
   const [themeKey, setThemeKey] = useLocalStorage('moomoney_theme', 'pink');
   const [categories, setCategories] = useLocalStorage('moomoney_categories', INITIAL_CATEGORIES);
   const [visibleBudgetCats, setVisibleBudgetCats] = useLocalStorage('moomoney_visibleBudgets', []);
-  
-  // FIX: Force reset lastActiveMonth to current period on load if it mismatches (unless intentional archive view)
   const [lastActiveMonth, setLastActiveMonth, isMonthLoaded] = useLocalStorage('moomoney_lastMonth', new Date().toISOString().slice(0, 7));
-  
   const [archives, setArchives] = useLocalStorage('moomoney_archives', []);
   const [categoryBudgets, setCategoryBudgets] = useLocalStorage('moomoney_categoryBudgets', { 'Kebutuhan Bulanan': 0, 'Kebutuhan Mingguan': 0, 'Buah': 0, 'Snack': 0, 'Tagihan': 0, 'Skincare': 0, 'Kesehatan': 0, 'Sedekah': 0, 'Transportasi': 0, 'Lainnya': 0 });
   const [expenses, setExpenses] = useLocalStorage('moomoney_expenses', [
@@ -424,21 +413,17 @@ const SapiFinanceApp = () => {
      const cutoff = parseInt(cutoffDay) || 1;
      const [yearStr, monthStr] = periodKey.split('-');
      const year = parseInt(yearStr);
-     const month = parseInt(monthStr) - 1; // 0-indexed
-
+     const month = parseInt(monthStr) - 1; 
      const start = new Date(year, month, cutoff);
      const end = new Date(year, month + 1, cutoff - 1);
-     
      return `${start.getDate()} ${start.toLocaleDateString('id-ID', {month:'short'})} - ${end.getDate()} ${end.toLocaleDateString('id-ID', {month:'short'})} ${end.getFullYear()}`;
   };
 
   const headerMonthLabel = viewArchiveData ? viewArchiveData.period : getPeriodRangeDisplay(lastActiveMonth);
 
-  // --- FILTER EXPENSES BY PERIOD (Active or Archive) ---
   const activePeriodExpenses = useMemo(() => {
     if (viewArchiveData) return viewArchiveData.expenses;
     const cutoff = parseInt(cutoffDay) || 1;
-    // CRITICAL: Ensure we show data for the LAST ACTIVE MONTH KEY, which follows Cutoff logic
     return expenses.filter(e => {
         if (!e.date) return false;
         const rowPeriodKey = getPeriodKey(e.date, cutoff);
@@ -446,7 +431,6 @@ const SapiFinanceApp = () => {
     });
   }, [expenses, lastActiveMonth, cutoffDay, viewArchiveData]);
 
-  // Derived Values
   const activeBudget = viewArchiveData ? viewArchiveData.budget : budget;
   const activeCategoryBudgets = viewArchiveData ? viewArchiveData.categoryBudgets : categoryBudgets;
   const totalExpenses = activePeriodExpenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
@@ -490,25 +474,15 @@ const SapiFinanceApp = () => {
     return [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [activePeriodExpenses, filterCategory]);
 
-  // Effects & Handlers
   const hasCheckedRef = useRef(false);
   useEffect(() => {
     if (!isMonthLoaded || hasCheckedRef.current) return; 
     const cutoff = parseInt(cutoffDay) || 1;
     const currentPeriodKey = getCurrentPeriodKey(cutoff);
-    
-    // Auto-update Last Active Month if user is simply in a new period (Live View)
-    // This fixes the "Wrongly detected as Archive" issue
     if (lastActiveMonth !== currentPeriodKey && !viewArchiveData) {
-        // If we haven't shown alert yet, check if it's actually a new future period
         if (lastActiveMonth < currentPeriodKey) {
-             if (!showMonthAlert && !showManualMonthAlert) {
-                setShowMonthAlert(true);
-             }
-        } else {
-            // If we drifted backwards (e.g. changed cutoff), just sync it
-            setLastActiveMonth(currentPeriodKey);
-        }
+             if (!showMonthAlert && !showManualMonthAlert) { setShowMonthAlert(true); }
+        } else { setLastActiveMonth(currentPeriodKey); }
     }
     hasCheckedRef.current = true;
   }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded, cutoffDay, viewArchiveData]);
@@ -548,7 +522,6 @@ const SapiFinanceApp = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Mood Logic
   let cowMood = 'normal';
   let cowMessage = 'Moo~ Aman nih !';
   let appBg = currentTheme.bgSoft;
@@ -586,7 +559,6 @@ const SapiFinanceApp = () => {
      appBg = 'bg-gray-100';
   }
 
-  // Chart Data
   const chartData = useMemo(() => {
     const data = {};
     let total = 0;
@@ -626,7 +598,6 @@ const SapiFinanceApp = () => {
     return `conic-gradient(${gradients.join(', ')})`;
   }, [chartData]);
 
-  // Handlers
   const updateArchive = (updatedData) => {
      if (!viewArchiveData) return;
      const newArchiveData = { ...viewArchiveData, ...updatedData };
@@ -640,6 +611,15 @@ const SapiFinanceApp = () => {
      setViewArchiveData(newArchiveData);
      const updatedArchives = archives.map(arc => arc.id === viewArchiveData.id ? newArchiveData : arc);
      setArchives(updatedArchives);
+  };
+
+  const handleRestoreArchive = () => {
+      if (!viewArchiveData) return;
+      const restoredExpenses = viewArchiveData.expenses;
+      setExpenses(prev => [...prev, ...restoredExpenses]);
+      setArchives(prev => prev.filter(a => a.id !== viewArchiveData.id));
+      setViewArchiveData(null);
+      alert("Data berhasil dikembalikan ke tampilan utama!");
   };
 
   const handleKeyDown = (e) => {
@@ -710,12 +690,9 @@ const SapiFinanceApp = () => {
   };
 
   const handleChange = (id, field, value) => {
-    // FIX: Manual Date Change Logic respecting Cutoff
     if (!viewArchiveData && field === 'date' && value) {
         const cutoff = parseInt(cutoffDay) || 1;
         const newPeriodKey = getPeriodKey(value, cutoff);
-        
-        // If the new date makes the item fall into a DIFFERENT period than the active one
         if (newPeriodKey !== lastActiveMonth) { 
             setPendingMonth(newPeriodKey); 
             setPendingRowId(id); 
@@ -741,7 +718,6 @@ const SapiFinanceApp = () => {
     const triggeringRow = expenses.find(e => e.id === pendingRowId) || {};
     const newRow = { id: 1, date: pendingDateValue, item: triggeringRow.item || '', category: triggeringRow.category || 'Lainnya', amount: triggeringRow.amount || 0, qty: triggeringRow.qty || 1, unit: triggeringRow.unit || '-' };
     setExpenses([newRow]); 
-    // Set the active month to the NEW period key
     setLastActiveMonth(pendingMonth); 
     setShowManualMonthAlert(false); setPendingMonth(null); setPendingRowId(null); setPendingDateValue(null);
   };
@@ -749,20 +725,15 @@ const SapiFinanceApp = () => {
   const handleAddRow = () => { 
       const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
       const newId = Date.now();
-      
-      // CRITICAL FIX: Ensure new row date is INSIDE the current view period using LOCAL time
       const cutoff = parseInt(cutoffDay) || 1;
-      let defaultDate = toLocalDateString(new Date()); // Use helper for Local Time
+      let defaultDate = toLocalDateString(new Date()); 
       
       if (!viewArchiveData) {
           const currentPeriodKey = getPeriodKey(defaultDate, cutoff);
-          // If today is NOT in the active view, force date to start of active view
           if (currentPeriodKey !== lastActiveMonth) {
              const [yStr, mStr] = lastActiveMonth.split('-');
              const y = parseInt(yStr);
-             const m = parseInt(mStr); // 1-indexed from key
-             
-             // Create safe date in LOCAL TIME for the start of that period
+             const m = parseInt(mStr); 
              const periodStart = new Date(y, m - 1, cutoff);
              defaultDate = toLocalDateString(periodStart);
           }
@@ -790,20 +761,18 @@ const SapiFinanceApp = () => {
   };
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { 
-      // Update the stored period key to today's period to stop alerting
       const cutoff = parseInt(cutoffDay) || 1;
       setLastActiveMonth(getCurrentPeriodKey(cutoff));
       setShowMonthAlert(false); 
   };
   const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat... Pastikan internet nyala."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
    
-  // --- IMPORT LOGIC: Updated with Cutoff ---
+  const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
   const handleFileImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!window.XLSX) { alert("Sistem Excel belum siap. Coba lagi sebentar."); return; }
     const reader = new FileReader();
-    
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target.result);
@@ -816,7 +785,7 @@ const SapiFinanceApp = () => {
             const rowStr = dataJson[i] ? dataJson[i].join(' ').toLowerCase() : '';
             if (rowStr.includes('tanggal') && rowStr.includes('jumlah')) { headerIndex = i; break; }
         }
-        if (headerIndex === -1) { alert("Format file tidak dikenali. Pastikan menggunakan file Excel dari MooMoney."); return; }
+        if (headerIndex === -1) { alert("Format file tidak dikenali."); return; }
         const headers = dataJson[headerIndex];
         const rows = dataJson.slice(headerIndex + 1);
         const dateIdx = headers.indexOf('Tanggal');
@@ -824,11 +793,9 @@ const SapiFinanceApp = () => {
         const qtyIdx = headers.indexOf('Qty');
         const catIdx = headers.indexOf('Kategori');
         const amtIdx = headers.indexOf('Jumlah');
-        if (dateIdx === -1 || itemIdx === -1 || amtIdx === -1) { alert("Kolom penting (Tanggal, Deskripsi, Jumlah) tidak ditemukan."); return; }
-        
+        if (dateIdx === -1 || itemIdx === -1 || amtIdx === -1) { alert("Kolom penting tidak ditemukan."); return; }
         const groupedExpenses = {};
         const cutoff = parseInt(cutoffDay) || 1;
-
         rows.forEach((row) => {
             if (!row[dateIdx]) return;
             const rawQtyStr = row[qtyIdx] || "1";
@@ -842,24 +809,16 @@ const SapiFinanceApp = () => {
             let dateStr = row[dateIdx];
             if (typeof dateStr === 'number') { const jsDate = new Date(Math.round((dateStr - 25569)*86400*1000)); if (!isNaN(jsDate)) { dateStr = jsDate.toISOString().split('T')[0]; } else { dateStr = new Date().toISOString().split('T')[0]; } }
             if (!dateStr || amount <= 0) return;
-            
-            // USE NEW PERIOD LOGIC HERE
             const periodKey = getPeriodKey(dateStr, cutoff);
-            
             if (!groupedExpenses[periodKey]) { groupedExpenses[periodKey] = []; }
             groupedExpenses[periodKey].push({ id: Date.now() + Math.random(), date: dateStr, item: row[itemIdx] || 'Item Impor', category: row[catIdx] || 'Lainnya', amount: amount, qty: qty, unit: unit || '-', isCustomCategory: false });
         });
-
         const activePeriod = viewArchiveData ? viewArchiveData.isoDate : lastActiveMonth;
-        let addedToCurrent = 0, addedToArchive = 0, createdArchive = 0;
-        
         Object.keys(groupedExpenses).forEach(periodKey => {
             const expenseList = groupedExpenses[periodKey];
-            
             if (periodKey === activePeriod) {
                 if (viewArchiveData) { updateArchive({ expenses: [...viewArchiveData.expenses, ...expenseList] }); } 
                 else { setExpenses(prev => [...prev, ...expenseList]); }
-                addedToCurrent += expenseList.length;
             } else {
                 const existingArchive = archives.find(a => a.isoDate === periodKey);
                 if (existingArchive) {
@@ -867,24 +826,20 @@ const SapiFinanceApp = () => {
                     const newTotal = updatedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
                     const newArchiveData = { ...existingArchive, expenses: updatedExpenses, totalExpenses: newTotal, balance: existingArchive.budget - newTotal };
                     setArchives(prev => prev.map(a => a.id === existingArchive.id ? newArchiveData : a));
-                    addedToArchive += expenseList.length;
                 } else {
                     const periodLabel = getPeriodRangeDisplay(periodKey);
                     const totalAmt = expenseList.reduce((acc, curr) => acc + curr.amount, 0);
                     const newArchive = { id: Date.now() + Math.random(), period: periodLabel, isoDate: periodKey, budget: 0, categoryBudgets: { ...categoryBudgets }, expenses: expenseList, totalExpenses: totalAmt, balance: 0 - totalAmt };
                     setArchives(prev => [newArchive, ...prev]);
-                    createdArchive += 1;
                 }
             }
         });
-        alert(`Impor Selesai!\n- Ditambahkan ke Tampilan Ini: ${addedToCurrent} item\n- Ditambahkan ke Arsip Lama: ${addedToArchive} item\n- Arsip Baru Dibuat: ${createdArchive}`);
-      } catch (err) { console.error(err); alert("Gagal membaca file Excel. Pastikan file tidak rusak."); }
+        alert(`Impor Selesai!`);
+      } catch (err) { console.error(err); alert("Gagal membaca file Excel."); }
     };
     reader.readAsArrayBuffer(file);
     e.target.value = null;
   };
-   
-  const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
@@ -913,7 +868,16 @@ const SapiFinanceApp = () => {
           </div>
            
           <div className="flex items-center gap-2">
-            {viewArchiveData && ( <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> <ArrowLeft size={16} /> KEMBALI </button> )}
+            {viewArchiveData && ( 
+                <div className="flex gap-1">
+                    <button onClick={handleRestoreArchive} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm" title="Kembalikan ke Tampilan Utama"> 
+                        <RefreshCcw size={16} /> <span className="hidden sm:inline">Restore</span> 
+                    </button>
+                    <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> 
+                        <ArrowLeft size={16} /> KEMBALI 
+                    </button> 
+                </div>
+            )}
             
              <div className="relative">
                 <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Ganti Tema">
@@ -944,7 +908,6 @@ const SapiFinanceApp = () => {
                 <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-white">
                     <Menu size={20} />
                 </button>
-                
                 {isMobileMenuOpen && (
                     <div className="absolute right-0 top-10 bg-white text-gray-800 rounded-xl shadow-xl p-2 w-48 z-50 border border-gray-100 animate-in fade-in slide-in-from-top-2">
                          <div className="flex flex-col gap-1">
@@ -957,7 +920,6 @@ const SapiFinanceApp = () => {
                     </div>
                 )}
             </div>
-
           </div>
         </div>
       </div>
@@ -976,10 +938,9 @@ const SapiFinanceApp = () => {
                 <h2 className="text-gray-500 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Target Budget Bulanan</h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <div className={`hidden sm:block p-3 rounded-full ${isOverBudget ? 'bg-red-100 text-red-600' : `${currentTheme.light} ${currentTheme.text}`}`}> <TrendingUp size={24} /> </div>
-                  <div className="flex-1 w-full"> <label className="text-[10px] md:text-xs text-gray-400 block mb-1">Ketuk angka untuk edit</label> <div className="relative w-full"> <span className="absolute left-0 bottom-2 text-lg md:text-2xl font-bold text-gray-400">Rp</span> <input type="text" inputMode="numeric" value={activeBudget === 0 ? '' : formatNumber(activeBudget)} placeholder="0" onChange={(e) => handleMainBudgetChange(e.target.value)} onKeyDown={handleKeyDown} className={`w-full pl-8 md:pl-10 pb-1 text-2xl md:text-4xl font-bold text-gray-800 border-b-2 border-dashed border-gray-300 ${currentTheme.ring} focus:outline-none bg-transparent transition-all disabled:opacity-50`} /> </div> </div>
+                  <div className="flex-1 w-full"> <label className="text-[10px] md:text-xs text-gray-400 block mb-1">Ketuk angka untuk edit</label> <div className="relative w-full"> <span className="absolute left-0 bottom-2 text-lg md:text-2xl font-bold text-gray-400">Rp</span> <input type="text" inputMode="numeric" value={activeBudget === 0 ? '' : formatNumber(activeBudget)} placeholder="0" onChange={(e) => handleMainBudgetChange(e.target.value)} onKeyDown={handleKeyDown} className={`w-full pl-8 md:pl-10 pb-1 text-2xl md:text-4xl font-bold text-gray-800 border-b-2 border-dashed border-gray-300 ${currentTheme.ring} focus:outline-none bg-transparent transition-all`} /> </div> </div>
                 </div>
               </div>
-              
                 <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
                   <h3 className="text-gray-600 text-sm font-bold flex items-center gap-2 mb-3"> <PieChart size={16} className="text-indigo-400" /> Statistik Pengeluaran </h3>
                   {totalExpenses > 0 ? (
@@ -1013,7 +974,6 @@ const SapiFinanceApp = () => {
                   )}
               </div>
             </div>
-             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               <div className={`rounded-2xl shadow-lg p-4 md:p-5 border-l-8 ${isOverBudget ? 'bg-red-50 border-red-500' : 'bg-white border-green-400'}`}>
                  <div className="flex justify-between items-start"> <div> <p className="text-gray-500 text-xs md:text-sm font-semibold">Terpakai</p> <p className={`text-xl md:text-2xl font-bold mt-1 break-all ${isOverBudget ? 'text-red-600' : 'text-gray-800'}`}> {formatRupiah(totalExpenses)} </p> </div> <Calculator className={`w-5 h-5 md:w-6 md:h-6 ${isOverBudget ? 'text-red-300' : 'text-green-300'}`} /> </div>
