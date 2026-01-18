@@ -348,7 +348,6 @@ const SapiFinanceApp = () => {
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
   
   // --- CORE LOGIC: CUTOFF DATE HANDLING ---
-  // Calculates the specific "Period Key" (YYYY-MM) a date belongs to based on cutoff
   const getPeriodKey = (dateStr, cutoff) => {
     if (!dateStr) return new Date().toISOString().slice(0, 7);
     const d = new Date(dateStr);
@@ -364,7 +363,7 @@ const SapiFinanceApp = () => {
             year--;
         }
     }
-    // Return key based on the START of the period (e.g., "2026-01" means the period starting Jan 2026)
+    // Return key based on the START of the period
     return new Date(year, month, 1).toISOString().slice(0, 7);
   };
 
@@ -425,10 +424,7 @@ const SapiFinanceApp = () => {
   // --- FILTER EXPENSES BY PERIOD (Active or Archive) ---
   const activePeriodExpenses = useMemo(() => {
     if (viewArchiveData) return viewArchiveData.expenses;
-    
-    // STRICT CUTOFF FILTERING
     const cutoff = parseInt(cutoffDay) || 1;
-    // We only show expenses that belong to the 'lastActiveMonth' period key
     return expenses.filter(e => {
         if (!e.date) return false;
         const rowPeriodKey = getPeriodKey(e.date, cutoff);
@@ -487,7 +483,6 @@ const SapiFinanceApp = () => {
     const cutoff = parseInt(cutoffDay) || 1;
     const currentPeriodKey = getCurrentPeriodKey(cutoff);
     
-    // Check if we have moved to a NEW period based on today's date and cutoff
     if (lastActiveMonth < currentPeriodKey && !showMonthAlert && !showManualMonthAlert) {
       setShowMonthAlert(true);
     }
@@ -691,12 +686,9 @@ const SapiFinanceApp = () => {
   };
 
   const handleChange = (id, field, value) => {
-    // FIX: Manual Date Change Logic respecting Cutoff
     if (!viewArchiveData && field === 'date' && value) {
         const cutoff = parseInt(cutoffDay) || 1;
         const newPeriodKey = getPeriodKey(value, cutoff);
-        
-        // If the new date makes the item fall into a DIFFERENT period than the active one
         if (newPeriodKey !== lastActiveMonth) { 
             setPendingMonth(newPeriodKey); 
             setPendingRowId(id); 
@@ -722,18 +714,32 @@ const SapiFinanceApp = () => {
     const triggeringRow = expenses.find(e => e.id === pendingRowId) || {};
     const newRow = { id: 1, date: pendingDateValue, item: triggeringRow.item || '', category: triggeringRow.category || 'Lainnya', amount: triggeringRow.amount || 0, qty: triggeringRow.qty || 1, unit: triggeringRow.unit || '-' };
     setExpenses([newRow]); 
-    // Set the active month to the NEW period key
     setLastActiveMonth(pendingMonth); 
     setShowManualMonthAlert(false); setPendingMonth(null); setPendingRowId(null); setPendingDateValue(null);
   };
 
   const handleAddRow = () => { 
       const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
-      const newId = targetList.length > 0 ? Math.max(...targetList.map(e => e.id)) + 1 : 1; 
-      const today = new Date().toISOString().slice(0, 10);
-      let defaultDate = today;
-      if (targetList.length > 0) { const maxDate = targetList.reduce((max, p) => p.date > max ? p.date : max, targetList[0].date); defaultDate = maxDate; }
+      const newId = Date.now();
       
+      // CRITICAL FIX: Ensure new row date is INSIDE the current view period
+      const cutoff = parseInt(cutoffDay) || 1;
+      let defaultDate = new Date().toISOString().slice(0, 10);
+      
+      if (!viewArchiveData) {
+          const currentPeriodKey = getPeriodKey(defaultDate, cutoff);
+          // If today is NOT in the active view, force date to start of active view
+          if (currentPeriodKey !== lastActiveMonth) {
+             const [y, m] = lastActiveMonth.split('-').map(Number);
+             // Create safe date: Year, Month-1 (JS is 0-index), Cutoff Day
+             const safeDateObj = new Date(y, m - 1, cutoff);
+             // Handle edge case if cutoff is 31 but month has 30 days, JS auto-corrects to next month
+             // We want to be safe, so we can just use the 15th of the expected month if needed, 
+             // but let's stick to cutoff for consistency.
+             defaultDate = safeDateObj.toISOString().slice(0, 10);
+          }
+      }
+
       const initialCat = filterCategory ? filterCategory : 'Lainnya';
       const isCustom = filterCategory ? true : false;
 
@@ -750,14 +756,12 @@ const SapiFinanceApp = () => {
       const newArchive = { id: Date.now(), period: periodLabel, isoDate: lastActiveMonth, budget: budget, categoryBudgets: categoryBudgets, expenses: expenses, totalExpenses: totalExpenses, balance: balance };
       setArchives(prev => [newArchive, ...prev]); 
       setExpenses([]); 
-      // Reset to CURRENT actual period
       const cutoff = parseInt(cutoffDay) || 1;
       setLastActiveMonth(getCurrentPeriodKey(cutoff)); 
       setShowMonthAlert(false); 
   };
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { 
-      // Update the stored period key to today's period to stop alerting
       const cutoff = parseInt(cutoffDay) || 1;
       setLastActiveMonth(getCurrentPeriodKey(cutoff));
       setShowMonthAlert(false); 
@@ -823,13 +827,11 @@ const SapiFinanceApp = () => {
         Object.keys(groupedExpenses).forEach(periodKey => {
             const expenseList = groupedExpenses[periodKey];
             
-            // If the imported expenses belong to the ACTIVE period
             if (periodKey === activePeriod) {
                 if (viewArchiveData) { updateArchive({ expenses: [...viewArchiveData.expenses, ...expenseList] }); } 
                 else { setExpenses(prev => [...prev, ...expenseList]); }
                 addedToCurrent += expenseList.length;
             } else {
-                // Check if an archive exists for this periodKey
                 const existingArchive = archives.find(a => a.isoDate === periodKey);
                 if (existingArchive) {
                     const updatedExpenses = [...existingArchive.expenses, ...expenseList];
@@ -838,7 +840,6 @@ const SapiFinanceApp = () => {
                     setArchives(prev => prev.map(a => a.id === existingArchive.id ? newArchiveData : a));
                     addedToArchive += expenseList.length;
                 } else {
-                    // Create new archive for this period
                     const periodLabel = getPeriodRangeDisplay(periodKey);
                     const totalAmt = expenseList.reduce((acc, curr) => acc + curr.amount, 0);
                     const newArchive = { id: Date.now() + Math.random(), period: periodLabel, isoDate: periodKey, budget: 0, categoryBudgets: { ...categoryBudgets }, expenses: expenseList, totalExpenses: totalAmt, balance: 0 - totalAmt };
@@ -885,7 +886,6 @@ const SapiFinanceApp = () => {
           <div className="flex items-center gap-2">
             {viewArchiveData && ( <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> <ArrowLeft size={16} /> KEMBALI </button> )}
             
-             {/* THEME BUTTON - NOW VISIBLE ON ALL DEVICES */}
              <div className="relative">
                 <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Ganti Tema">
                     <Palette size={18} />
@@ -903,7 +903,6 @@ const SapiFinanceApp = () => {
                 )}
              </div>
 
-            {/* Desktop Only Buttons */}
             <div className="hidden md:flex gap-2">
                 <button onClick={() => setShowHistory(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Riwayat"><History size={18} /></button>
                 <button onClick={() => setShowSettings(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Pengaturan"><Settings size={18} /></button>
@@ -912,7 +911,6 @@ const SapiFinanceApp = () => {
                 <button onClick={handleImportClick} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Import Excel"><Upload size={18} /></button>
             </div>
 
-            {/* Mobile Hamburger Menu */}
             <div className="md:hidden relative" ref={mobileMenuRef}>
                 <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-white">
                     <Menu size={20} />
@@ -1001,7 +999,7 @@ const SapiFinanceApp = () => {
           </div>
         </div>
 
-        {/* RESTORED: BUDGET ALLOCATION CARDS */}
+        {/* BUDGET ALLOCATION CARDS */}
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 mb-8">
           <h3 className={`text-lg font-bold ${currentTheme.text} flex items-center gap-2 mb-4`}> <Wallet size={20} /> Alokasi Budget per Kategori </h3>
           
@@ -1064,8 +1062,6 @@ const SapiFinanceApp = () => {
 
         <div className={`bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-8`}>
            <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors`}>
-             
-             {/* WRAPPER FOR TITLE */}
              <div className="flex-1">
                  <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
                   <div className="bg-white/50 p-1.5 rounded text-inherit">
@@ -1077,17 +1073,18 @@ const SapiFinanceApp = () => {
                 </h3>
              </div>
 
-            {/* WRAPPER FOR BUTTON - ISOLATED & CLICKABLE */}
+            {/* BUTTON FIX: Z-INDEX, TYPE, STOP PROPAGATION */}
             <div className="relative z-50">
                 <button 
                     type="button" 
                     onClick={(e) => { 
+                        e.preventDefault(); 
                         e.stopPropagation(); 
                         handleAddRow(); 
                     }} 
-                    className={`${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-transform shadow-md active:scale-95 cursor-pointer`}
+                    className={`${currentTheme.bg} ${currentTheme.hover} text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-transform cursor-pointer`}
                 >
-                  <Plus size={14} className="md:w-4 md:h-4" /> 
+                  <Plus size={16} /> 
                   <span className="hidden sm:inline">Tambah Baris</span>
                   <span className="inline sm:hidden">Tambah</span>
                 </button>
