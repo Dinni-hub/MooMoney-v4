@@ -1001,7 +1001,7 @@ const SapiFinanceApp = () => {
           </div>
         </div>
 
-        {/* RESTORED BUDGET ALLOCATION SECTION */}
+        {/* RESTORED: BUDGET ALLOCATION CARDS */}
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 mb-8">
           <h3 className={`text-lg font-bold ${currentTheme.text} flex items-center gap-2 mb-4`}> <Wallet size={20} /> Alokasi Budget per Kategori </h3>
           
@@ -1064,21 +1064,38 @@ const SapiFinanceApp = () => {
 
         <div className={`bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-8`}>
            <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors`}>
-             <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
-              <div className="bg-white/50 p-1.5 rounded text-inherit">
-                <FileText size={20} />
-              </div>
-              <span className="hidden sm:inline">Catatan Pengeluaran</span>
-              {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
-              <span className="inline sm:hidden">Daftar</span>
-            </h3>
-            {/* FIX: Add z-index and explicit type button to ensure clickability */}
-            <button type="button" onClick={handleAddRow} className={`relative z-10 ${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95 cursor-pointer`}>
-              <Plus size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Tambah Baris</span><span className="inline sm:hidden">Tambah</span>
-            </button>
+             
+             {/* WRAPPER FOR TITLE */}
+             <div className="flex-1">
+                 <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
+                  <div className="bg-white/50 p-1.5 rounded text-inherit">
+                    <FileText size={20} />
+                  </div>
+                  <span className="hidden sm:inline">Catatan Pengeluaran</span>
+                  {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
+                  <span className="inline sm:hidden">Daftar</span>
+                </h3>
+             </div>
+
+            {/* WRAPPER FOR BUTTON - ISOLATED & CLICKABLE */}
+            <div className="relative z-50">
+                <button 
+                    type="button" 
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        handleAddRow(); 
+                    }} 
+                    className={`${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-transform shadow-md active:scale-95 cursor-pointer`}
+                >
+                  <Plus size={14} className="md:w-4 md:h-4" /> 
+                  <span className="hidden sm:inline">Tambah Baris</span>
+                  <span className="inline sm:hidden">Tambah</span>
+                </button>
+            </div>
+
           </div>
            
-          {/* RESPONSIVE TABLE (SCROLLABLE ON MOBILE) */}
+          {/* RESPONSIVE TABLE VIEW (SCROLLABLE ON MOBILE) */}
           <div className="w-full overflow-x-auto">
             <table className="w-full text-left border-collapse table-fixed min-w-[600px] md:min-w-full">
               <thead>
