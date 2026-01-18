@@ -389,8 +389,10 @@ const SapiFinanceApp = () => {
   const [themeKey, setThemeKey] = useLocalStorage('moomoney_theme', 'pink');
   const [categories, setCategories] = useLocalStorage('moomoney_categories', INITIAL_CATEGORIES);
   const [visibleBudgetCats, setVisibleBudgetCats] = useLocalStorage('moomoney_visibleBudgets', []);
-  // IMPORTANT: lastActiveMonth now stores the PERIOD KEY (YYYY-MM), not calendar month
+  
+  // FIX: Force reset lastActiveMonth to current period on load if it mismatches (unless intentional archive view)
   const [lastActiveMonth, setLastActiveMonth, isMonthLoaded] = useLocalStorage('moomoney_lastMonth', new Date().toISOString().slice(0, 7));
+  
   const [archives, setArchives] = useLocalStorage('moomoney_archives', []);
   const [categoryBudgets, setCategoryBudgets] = useLocalStorage('moomoney_categoryBudgets', { 'Kebutuhan Bulanan': 0, 'Kebutuhan Mingguan': 0, 'Buah': 0, 'Snack': 0, 'Tagihan': 0, 'Skincare': 0, 'Kesehatan': 0, 'Sedekah': 0, 'Transportasi': 0, 'Lainnya': 0 });
   const [expenses, setExpenses] = useLocalStorage('moomoney_expenses', [
@@ -436,6 +438,7 @@ const SapiFinanceApp = () => {
   const activePeriodExpenses = useMemo(() => {
     if (viewArchiveData) return viewArchiveData.expenses;
     const cutoff = parseInt(cutoffDay) || 1;
+    // CRITICAL: Ensure we show data for the LAST ACTIVE MONTH KEY, which follows Cutoff logic
     return expenses.filter(e => {
         if (!e.date) return false;
         const rowPeriodKey = getPeriodKey(e.date, cutoff);
@@ -494,11 +497,21 @@ const SapiFinanceApp = () => {
     const cutoff = parseInt(cutoffDay) || 1;
     const currentPeriodKey = getCurrentPeriodKey(cutoff);
     
-    if (lastActiveMonth < currentPeriodKey && !showMonthAlert && !showManualMonthAlert) {
-      setShowMonthAlert(true);
+    // Auto-update Last Active Month if user is simply in a new period (Live View)
+    // This fixes the "Wrongly detected as Archive" issue
+    if (lastActiveMonth !== currentPeriodKey && !viewArchiveData) {
+        // If we haven't shown alert yet, check if it's actually a new future period
+        if (lastActiveMonth < currentPeriodKey) {
+             if (!showMonthAlert && !showManualMonthAlert) {
+                setShowMonthAlert(true);
+             }
+        } else {
+            // If we drifted backwards (e.g. changed cutoff), just sync it
+            setLastActiveMonth(currentPeriodKey);
+        }
     }
     hasCheckedRef.current = true;
-  }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded, cutoffDay]);
+  }, [lastActiveMonth, showMonthAlert, showManualMonthAlert, isMonthLoaded, cutoffDay, viewArchiveData]);
 
   useEffect(() => {
     if (window.XLSX) return;
@@ -963,7 +976,7 @@ const SapiFinanceApp = () => {
                 <h2 className="text-gray-500 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Target Budget Bulanan</h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <div className={`hidden sm:block p-3 rounded-full ${isOverBudget ? 'bg-red-100 text-red-600' : `${currentTheme.light} ${currentTheme.text}`}`}> <TrendingUp size={24} /> </div>
-                  <div className="flex-1 w-full"> <label className="text-[10px] md:text-xs text-gray-400 block mb-1">Ketuk angka untuk edit</label> <div className="relative w-full"> <span className="absolute left-0 bottom-2 text-lg md:text-2xl font-bold text-gray-400">Rp</span> <input type="text" inputMode="numeric" value={activeBudget === 0 ? '' : formatNumber(activeBudget)} placeholder="0" onChange={(e) => handleMainBudgetChange(e.target.value)} onKeyDown={handleKeyDown} disabled={!!viewArchiveData} className={`w-full pl-8 md:pl-10 pb-1 text-2xl md:text-4xl font-bold text-gray-800 border-b-2 border-dashed border-gray-300 ${currentTheme.ring} focus:outline-none bg-transparent transition-all disabled:opacity-50`} /> </div> </div>
+                  <div className="flex-1 w-full"> <label className="text-[10px] md:text-xs text-gray-400 block mb-1">Ketuk angka untuk edit</label> <div className="relative w-full"> <span className="absolute left-0 bottom-2 text-lg md:text-2xl font-bold text-gray-400">Rp</span> <input type="text" inputMode="numeric" value={activeBudget === 0 ? '' : formatNumber(activeBudget)} placeholder="0" onChange={(e) => handleMainBudgetChange(e.target.value)} onKeyDown={handleKeyDown} className={`w-full pl-8 md:pl-10 pb-1 text-2xl md:text-4xl font-bold text-gray-800 border-b-2 border-dashed border-gray-300 ${currentTheme.ring} focus:outline-none bg-transparent transition-all disabled:opacity-50`} /> </div> </div>
                 </div>
               </div>
               
@@ -1015,7 +1028,6 @@ const SapiFinanceApp = () => {
           </div>
         </div>
 
-        {/* BUDGET ALLOCATION CARDS */}
         <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border border-gray-100 mb-8">
           <h3 className={`text-lg font-bold ${currentTheme.text} flex items-center gap-2 mb-4`}> <Wallet size={20} /> Alokasi Budget per Kategori </h3>
           
@@ -1039,7 +1051,7 @@ const SapiFinanceApp = () => {
                   </div>
                   <div className="relative mb-2 w-full mt-2" onClick={(e) => e.stopPropagation()}>
                     <span className="absolute left-0 bottom-1 text-xs font-bold text-gray-400">Rp</span>
-                    <input type="text" inputMode="numeric" placeholder="0" value={catBudget === 0 ? '' : formatNumber(catBudget)} onChange={(e) => handleCategoryBudgetChange(cat, e.target.value)} onKeyDown={handleKeyDown} disabled={!!viewArchiveData} className={`w-full pl-6 text-right text-lg font-bold border-b border-dashed border-gray-300 focus:outline-none bg-transparent relative z-20 ${isCatOver ? 'text-red-600' : 'text-gray-700'} ${currentTheme.ring} disabled:opacity-50`} />
+                    <input type="text" inputMode="numeric" placeholder="0" value={catBudget === 0 ? '' : formatNumber(catBudget)} onChange={(e) => handleCategoryBudgetChange(cat, e.target.value)} onKeyDown={handleKeyDown} className={`w-full pl-6 text-right text-lg font-bold border-b border-dashed border-gray-300 focus:outline-none bg-transparent relative z-20 ${isCatOver ? 'text-red-600' : 'text-gray-700'} ${currentTheme.ring} disabled:opacity-50`} />
                   </div>
                   <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden"> <div className={`h-full rounded-full transition-all duration-500 ${isCatOver ? 'bg-red-500' : currentTheme.bg}`} style={{ width: `${percent}%` }}></div> </div>
                   {catBudget > 0 && ( <div className="flex justify-between items-center mt-1"> {isCatOver && <AlertTriangle size={10} className="text-red-500" />} <p className={`text-[9px] text-right w-full ${isCatOver ? 'text-red-500 font-bold' : 'text-gray-400'}`}> {isCatOver ? 'Over Budget!' : `Sisa: ${formatRupiah(catBudget - spent)}`} </p> </div> )}
@@ -1089,7 +1101,6 @@ const SapiFinanceApp = () => {
                 </h3>
              </div>
 
-            {/* BUTTON FIX: Z-INDEX, TYPE, STOP PROPAGATION */}
             <div className="relative z-50">
                 <button 
                     type="button" 
@@ -1108,7 +1119,7 @@ const SapiFinanceApp = () => {
 
           </div>
            
-          {/* RESPONSIVE TABLE VIEW (SCROLLABLE ON MOBILE) */}
+          {/* RESPONSIVE TABLE VIEW (FIT TO SCREEN ON MOBILE) */}
           <div className="w-full">
             <table className="w-full text-left border-collapse table-fixed">
               <thead>
@@ -1131,7 +1142,6 @@ const SapiFinanceApp = () => {
                       ) : (
                           <div className="flex flex-col items-center gap-3">
                             <p>Belum ada pengeluaran. Sapi senang!</p>
-                            {/* REMOVED EMOJI AS REQUESTED */}
                             <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                           </div>
                       )}
