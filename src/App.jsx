@@ -347,7 +347,16 @@ const SapiFinanceApp = () => {
   };
   const THEME_HUES = { pink: 330, blue: 217, green: 150, purple: 270, orange: 30 };
   
-  // --- CORE LOGIC: CUTOFF DATE HANDLING ---
+  // --- CORE LOGIC: DATE & CUTOFF HANDLING ---
+  // Helper to format date strictly as YYYY-MM-DD in LOCAL TIME
+  const toLocalDateString = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  // Calculates the specific "Period Key" (YYYY-MM) a date belongs to based on cutoff
   const getPeriodKey = (dateStr, cutoff) => {
     if (!dateStr) return new Date().toISOString().slice(0, 7);
     const d = new Date(dateStr);
@@ -364,12 +373,14 @@ const SapiFinanceApp = () => {
         }
     }
     // Return key based on the START of the period
-    return new Date(year, month, 1).toISOString().slice(0, 7);
+    const startOfPeriod = new Date(year, month, 1);
+    const mStr = String(startOfPeriod.getMonth() + 1).padStart(2, '0');
+    const yStr = startOfPeriod.getFullYear();
+    return `${yStr}-${mStr}`;
   };
 
   const getCurrentPeriodKey = (cutoff) => {
-      const today = new Date();
-      return getPeriodKey(today.toISOString().split('T')[0], cutoff);
+      return getPeriodKey(toLocalDateString(new Date()), cutoff);
   };
 
   // --- STATE ---
@@ -686,9 +697,12 @@ const SapiFinanceApp = () => {
   };
 
   const handleChange = (id, field, value) => {
+    // FIX: Manual Date Change Logic respecting Cutoff
     if (!viewArchiveData && field === 'date' && value) {
         const cutoff = parseInt(cutoffDay) || 1;
         const newPeriodKey = getPeriodKey(value, cutoff);
+        
+        // If the new date makes the item fall into a DIFFERENT period than the active one
         if (newPeriodKey !== lastActiveMonth) { 
             setPendingMonth(newPeriodKey); 
             setPendingRowId(id); 
@@ -714,6 +728,7 @@ const SapiFinanceApp = () => {
     const triggeringRow = expenses.find(e => e.id === pendingRowId) || {};
     const newRow = { id: 1, date: pendingDateValue, item: triggeringRow.item || '', category: triggeringRow.category || 'Lainnya', amount: triggeringRow.amount || 0, qty: triggeringRow.qty || 1, unit: triggeringRow.unit || '-' };
     setExpenses([newRow]); 
+    // Set the active month to the NEW period key
     setLastActiveMonth(pendingMonth); 
     setShowManualMonthAlert(false); setPendingMonth(null); setPendingRowId(null); setPendingDateValue(null);
   };
@@ -722,21 +737,25 @@ const SapiFinanceApp = () => {
       const targetList = viewArchiveData ? viewArchiveData.expenses : expenses;
       const newId = Date.now();
       
-      // CRITICAL FIX: Ensure new row date is INSIDE the current view period
+      // CRITICAL FIX: Ensure new row date is INSIDE the current view period using LOCAL time
       const cutoff = parseInt(cutoffDay) || 1;
-      let defaultDate = new Date().toISOString().slice(0, 10);
+      let defaultDate = toLocalDateString(new Date()); // Use helper for Local Time
       
       if (!viewArchiveData) {
           const currentPeriodKey = getPeriodKey(defaultDate, cutoff);
           // If today is NOT in the active view, force date to start of active view
           if (currentPeriodKey !== lastActiveMonth) {
-             const [y, m] = lastActiveMonth.split('-').map(Number);
-             // Create safe date: Year, Month-1 (JS is 0-index), Cutoff Day
-             const safeDateObj = new Date(y, m - 1, cutoff);
-             // Handle edge case if cutoff is 31 but month has 30 days, JS auto-corrects to next month
-             // We want to be safe, so we can just use the 15th of the expected month if needed, 
-             // but let's stick to cutoff for consistency.
-             defaultDate = safeDateObj.toISOString().slice(0, 10);
+             const [yStr, mStr] = lastActiveMonth.split('-');
+             const y = parseInt(yStr);
+             const m = parseInt(mStr); // 1-indexed from key
+             
+             // Create safe date in LOCAL TIME for the start of that period
+             // Note: m is 1-12. Date() needs 0-11.
+             // If m is 1 (Jan), we want period start.
+             // If cutoff is 25, period "2026-01" starts Dec 25, 2025.
+             
+             const periodStart = new Date(y, m - 1, cutoff);
+             defaultDate = toLocalDateString(periodStart);
           }
       }
 
@@ -762,6 +781,7 @@ const SapiFinanceApp = () => {
   };
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { 
+      // Update the stored period key to today's period to stop alerting
       const cutoff = parseInt(cutoffDay) || 1;
       setLastActiveMonth(getCurrentPeriodKey(cutoff));
       setShowMonthAlert(false); 
