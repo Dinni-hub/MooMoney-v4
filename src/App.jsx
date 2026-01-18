@@ -103,7 +103,6 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <circle cx="120" cy="85" r="8" fill="#fff" stroke="#000" strokeWidth="2" />
             <circle cx="120" cy="85" r="3" fill="#000" />
             <circle cx="100" cy="135" r="5" fill="#333" />
-            {/* Tetesan Air Keringat */}
             <path d="M135 40 Q 145 55 145 62 A 10 10 0 1 1 125 62 Q 125 55 135 40 Z" fill="#3b82f6" opacity="0.9" />
             <path d="M132 55 Q 133 52 135 55" stroke="#fff" strokeWidth="2" fill="none" opacity="0.7" />
           </>
@@ -112,7 +111,6 @@ const CowAvatar = ({ mood, className = "w-48 h-48 sm:w-60 sm:h-60", uniqueId = "
             <path d="M70 90 Q 80 80 90 90" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
             <path d="M110 90 Q 120 80 130 90" stroke="#000" strokeWidth="3" fill="none" strokeLinecap="round" />
             <path d="M85 135 Q 100 150 115 135" stroke="#000" strokeWidth="2" fill="none" strokeLinecap="round" />
-            {/* Pipi Merona */}
            <circle cx="65" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
             <circle cx="135" cy="105" r="6" fill="#fca5a5" opacity="0.6" />
            </>
@@ -340,7 +338,6 @@ const ManualMonthChangeModal = ({ isOpen, onClose, onConfirm, newMonthName }) =>
 const SapiFinanceApp = () => {
   // --- Constants ---
   const INITIAL_CATEGORIES = ['Kebutuhan Bulanan', 'Kebutuhan Mingguan', 'Buah', 'Snack', 'Tagihan', 'Skincare', 'Kesehatan', 'Sedekah', 'Transportasi', 'Lainnya'];
-  const CATEGORY_UNITS = { 'Kebutuhan Bulanan': 'pcs', 'Kebutuhan Mingguan': 'pcs/kg', 'Buah': 'kg', 'Snack': 'pcs', 'Tagihan': '-', 'Skincare': 'pcs', 'Kesehatan': 'pcs', 'Sedekah': '-', 'Transportasi': 'kali', 'Lainnya': '-', 'Refill Galon': 'galon', 'Galon': 'galon' };
   const THEMES = {
     pink: { base: 'pink', hex: '#ec4899', name: 'Pink', bg: 'bg-pink-500', bgSoft: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-400', hover: 'hover:bg-pink-600', light: 'bg-pink-100', icon: 'text-pink-400', ring: 'focus:border-pink-500', table: { header: ['bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600', 'bg-pink-700', 'bg-pink-800'], cell: ['bg-pink-50', 'bg-pink-100', 'bg-pink-200', 'bg-pink-300', 'bg-pink-400', 'bg-pink-500', 'bg-pink-600'] } },
     blue: { base: 'blue', hex: '#3b82f6', name: 'Biru', bg: 'bg-blue-500', bgSoft: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-400', hover: 'hover:bg-blue-600', light: 'bg-blue-100', icon: 'text-blue-400', ring: 'focus:border-blue-500', table: { header: ['bg-blue-200', 'bg-blue-300', 'bg-blue-400', 'bg-blue-500', 'bg-blue-600', 'bg-blue-700', 'bg-blue-800'], cell: ['bg-blue-50', 'bg-blue-100', 'bg-blue-200', 'bg-blue-300', 'bg-blue-400', 'bg-blue-500', 'bg-blue-600'] } },
@@ -710,7 +707,6 @@ const SapiFinanceApp = () => {
       let defaultDate = today;
       if (targetList.length > 0) { const maxDate = targetList.reduce((max, p) => p.date > max ? p.date : max, targetList[0].date); defaultDate = maxDate; }
       
-      // FIX: If filter is active, use filtered category
       const initialCat = filterCategory ? filterCategory : 'Lainnya';
       const isCustom = filterCategory ? true : false;
 
@@ -732,12 +728,32 @@ const SapiFinanceApp = () => {
   const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
   const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat... Pastikan internet nyala."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
    
-  // FIX: MOBILE IMPORT LABEL
+  // --- IMPORT LOGIC: Updated with Cutoff ---
   const handleFileImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (!window.XLSX) { alert("Sistem Excel belum siap. Coba lagi sebentar."); return; }
     const reader = new FileReader();
+    
+    // NEW Helper: Determine Period Key based on Cutoff
+    const getPeriodKey = (dateStr, cutoff) => {
+        const d = new Date(dateStr);
+        const day = d.getDate();
+        let month = d.getMonth(); // 0-11
+        let year = d.getFullYear();
+        
+        // If day is before cutoff, it belongs to PREVIOUS period month
+        if (day < cutoff) {
+            month--;
+            if (month < 0) {
+                month = 11;
+                year--;
+            }
+        }
+        // Construct YYYY-MM based on the START of the period
+        return new Date(year, month, 1).toISOString().slice(0, 7);
+    };
+
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target.result);
@@ -759,7 +775,10 @@ const SapiFinanceApp = () => {
         const catIdx = headers.indexOf('Kategori');
         const amtIdx = headers.indexOf('Jumlah');
         if (dateIdx === -1 || itemIdx === -1 || amtIdx === -1) { alert("Kolom penting (Tanggal, Deskripsi, Jumlah) tidak ditemukan."); return; }
+        
         const groupedExpenses = {};
+        const cutoff = parseInt(cutoffDay) || 1;
+
         rows.forEach((row) => {
             if (!row[dateIdx]) return;
             const rawQtyStr = row[qtyIdx] || "1";
@@ -773,12 +792,17 @@ const SapiFinanceApp = () => {
             let dateStr = row[dateIdx];
             if (typeof dateStr === 'number') { const jsDate = new Date(Math.round((dateStr - 25569)*86400*1000)); if (!isNaN(jsDate)) { dateStr = jsDate.toISOString().split('T')[0]; } else { dateStr = new Date().toISOString().split('T')[0]; } }
             if (!dateStr || amount <= 0) return;
-            const monthKey = dateStr.slice(0, 7);
+            
+            // USE NEW PERIOD LOGIC HERE
+            const monthKey = getPeriodKey(dateStr, cutoff);
+            
             if (!groupedExpenses[monthKey]) { groupedExpenses[monthKey] = []; }
             groupedExpenses[monthKey].push({ id: Date.now() + Math.random(), date: dateStr, item: row[itemIdx] || 'Item Impor', category: row[catIdx] || 'Lainnya', amount: amount, qty: qty, unit: unit || '-', isCustomCategory: false });
         });
+
         const activeMonth = viewArchiveData ? viewArchiveData.isoDate : lastActiveMonth;
         let addedToCurrent = 0, addedToArchive = 0, createdArchive = 0;
+        
         Object.keys(groupedExpenses).forEach(monthKey => {
             const expenseList = groupedExpenses[monthKey];
             if (monthKey === activeMonth) {
@@ -820,7 +844,6 @@ const SapiFinanceApp = () => {
       <SummaryModal isOpen={showSummary} onClose={() => setShowSummary(false)} totalBudget={activeBudget} totalExpenses={totalExpenses} balance={balance} theme={currentTheme} />
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} archives={archives} onLoadArchive={handleLoadArchive} onDeleteArchive={handleDeleteArchive} currentMonthLabel={headerMonthLabel} />
 
-      {/* FIXED: Input File moved to top level to ensure accessibility */}
       <input 
         id="import-excel-input"
         type="file" 
@@ -842,13 +865,11 @@ const SapiFinanceApp = () => {
           <div className="flex items-center gap-2">
             {viewArchiveData && ( <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> <ArrowLeft size={16} /> KEMBALI </button> )}
             
-            {/* BUTTONS (Visible on both Desktop & Mobile) */}
-            <div className="flex gap-2">
+            {/* Desktop Only Buttons */}
+            <div className="hidden md:flex gap-2">
                 <button onClick={() => setShowHistory(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Riwayat"><History size={18} /></button>
                 <button onClick={() => setShowSettings(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Pengaturan"><Settings size={18} /></button>
-                
-                 {/* THEME BUTTON */}
-                 <div className="relative">
+                <div className="relative">
                     <button onClick={() => setShowThemeSelector(!showThemeSelector)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Ganti Tema">
                         <Palette size={18} />
                     </button>
@@ -864,25 +885,24 @@ const SapiFinanceApp = () => {
                         </div>
                     )}
                  </div>
-
-                {/* Desktop Specific */}
-                <button onClick={() => setShowSummary(true)} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Laporan"><FileText size={18} /></button>
-                <button onClick={exportToExcel} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Excel"><Download size={18} /></button>
-                <button onClick={handleImportClick} className="hidden md:flex p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors items-center gap-1" title="Import Excel"><Upload size={18} /></button>
+                <button onClick={() => setShowSummary(true)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Laporan"><FileText size={18} /></button>
+                <button onClick={exportToExcel} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Excel"><Download size={18} /></button>
+                <button onClick={handleImportClick} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-1" title="Import Excel"><Upload size={18} /></button>
             </div>
 
-            {/* Mobile Hamburger Menu */}
+            {/* Mobile Hamburger Menu - Smaller & Positioned */}
             <div className="md:hidden relative" ref={mobileMenuRef}>
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-white">
-                    <Menu size={24} />
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors text-white">
+                    <Menu size={20} />
                 </button>
                 
                 {isMobileMenuOpen && (
-                    <div className="absolute right-0 top-12 bg-white text-gray-800 rounded-xl shadow-xl p-2 w-48 z-50 border border-gray-100 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute right-0 top-10 bg-white text-gray-800 rounded-xl shadow-xl p-2 w-48 z-50 border border-gray-100 animate-in fade-in slide-in-from-top-2">
                          <div className="flex flex-col gap-1">
+                            <button onClick={() => { setShowHistory(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><History size={16}/> Riwayat</button>
+                            <button onClick={() => { setShowSettings(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Settings size={16}/> Pengaturan</button>
                             <button onClick={() => { setShowSummary(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
                             <button onClick={() => { exportToExcel(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
-                            {/* FIX: Trigger label for native input file on mobile */}
                             <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer w-full"><Upload size={16}/> Import Excel</label>
                          </div>
                     </div>
@@ -911,7 +931,6 @@ const SapiFinanceApp = () => {
                 </div>
               </div>
               
-               {/* Chart Always Visible */}
                 <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
                   <h3 className="text-gray-600 text-sm font-bold flex items-center gap-2 mb-3"> <PieChart size={16} className="text-indigo-400" /> Statistik Pengeluaran </h3>
                   {totalExpenses > 0 ? (
@@ -1022,7 +1041,6 @@ const SapiFinanceApp = () => {
 
         <div className={`bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 mb-8`}>
            <div className={`p-3 md:p-4 ${currentTheme.light} border-b border-gray-100 flex flex-wrap justify-between items-center gap-2 transition-colors`}>
-           {/* IKON CATATAN PENGELUARAN: FILE TEXT */}
              <h3 className={`font-bold ${currentTheme.text} flex items-center gap-2 text-sm md:text-base`}>
               <div className="bg-white/50 p-1.5 rounded text-inherit">
                 <FileText size={20} />
@@ -1031,24 +1049,69 @@ const SapiFinanceApp = () => {
               {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
               <span className="inline sm:hidden">Daftar</span>
             </h3>
-            {/* FIX: Use Type Button explicitly */}
-            <button type="button" onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95`}>
+            {/* FIXED: Add type=button and relative positioning to ensure clickability */}
+            <button type="button" onClick={handleAddRow} className={`relative z-10 ${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95`}>
               <Plus size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Tambah Baris</span><span className="inline sm:hidden">Tambah</span>
             </button>
           </div>
            
-          {/* FIX: Add overflow-x-auto wrapper for mobile table scrolling */}
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full table-fixed">
+          {/* MOBILE VIEW: CARD LIST (Landing Page Style) */}
+          <div className="block md:hidden bg-gray-50 p-3 space-y-3">
+             {filteredExpenses.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 italic text-sm bg-white rounded-xl border border-gray-100 p-6 flex flex-col items-center gap-3">
+                     <p>Belum ada pengeluaran. Sapi senang!</p>
+                     <CowAvatar mood="happy" className="w-16 h-16" uniqueId="empty-mobile" />
+                </div>
+             ) : (
+                filteredExpenses.map((row) => (
+                    <div key={row.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 relative">
+                        <div className="flex justify-between items-start mb-2">
+                             <div>
+                                 <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} className="text-xs font-bold text-gray-500 bg-transparent focus:outline-none mb-1 block"/>
+                                 <input type="text" placeholder="Item..." value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} className="font-bold text-gray-800 bg-transparent focus:outline-none w-full placeholder-gray-300"/>
+                             </div>
+                             <div className="text-right">
+                                 <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} className="text-right font-bold text-gray-800 bg-transparent focus:outline-none w-24 placeholder-gray-300"/>
+                                 <div className="text-[10px] text-gray-400 mt-1">Rp</div>
+                             </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-2 bg-gray-50 p-2 rounded-lg">
+                            <div className="flex-1">
+                                <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} className="w-full text-xs bg-transparent border-none p-0 focus:ring-0 text-gray-600 font-medium">
+                                    <option value="">Kategori...</option>
+                                    {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                                </select>
+                            </div>
+                            <div className="w-px h-4 bg-gray-300"></div>
+                            <div className="flex items-center w-16 gap-1">
+                                <input type="number" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} className="w-8 text-center text-xs bg-transparent focus:outline-none"/>
+                                <input type="text" value={row.unit} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} className="w-8 text-center text-[10px] text-gray-400 bg-transparent focus:outline-none"/>
+                            </div>
+                        </div>
+
+                        <div className="absolute -top-2 -right-2">
+                            <button onClick={() => handleDeleteRow(row.id)} className="bg-white text-gray-300 hover:text-red-500 shadow-sm border border-gray-100 rounded-full p-1.5 transition-colors">
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    </div>
+                ))
+             )}
+          </div>
+
+          {/* DESKTOP VIEW: TABLE */}
+          <div className="hidden md:block w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse table-fixed">
               <thead>
-                <tr className="text-gray-900 text-[10px] md:text-sm uppercase tracking-wider">
-                  <th className={`p-1 md:p-4 w-10 md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
-                   <th className={`p-1 md:p-4 w-24 md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
-                  <th className={`p-1 md:p-4 w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
-                  <th className={`p-1 md:p-4 w-16 md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
-                  <th className={`p-1 md:p-4 w-32 md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
-                   <th className={`p-1 md:p-4 w-24 md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
-                  <th className={`p-1 md:p-4 w-10 md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
+                <tr className="text-gray-900 text-sm uppercase tracking-wider">
+                  <th className={`p-4 w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
+                   <th className={`p-4 w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
+                  <th className={`p-4 w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
+                  <th className={`p-4 w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
+                  <th className={`p-4 w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
+                   <th className={`p-4 w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
+                  <th className={`p-4 w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1059,7 +1122,8 @@ const SapiFinanceApp = () => {
                           `Belum ada pengeluaran di kategori ${filterCategory}`
                       ) : (
                           <div className="flex flex-col items-center gap-3">
-                            <p>Belum ada pengeluaran. Sapi senang! 🐮</p>
+                            <p>Belum ada pengeluaran. Sapi senang!</p>
+                            {/* REMOVED EMOJI AS REQUESTED */}
                             <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                           </div>
                       )}
@@ -1069,7 +1133,6 @@ const SapiFinanceApp = () => {
                   filteredExpenses.map((row, index) => {
                     const isNewDateGroup = index === 0 || row.date !== filteredExpenses[index - 1].date;
                     
-                    // CALCULATE DAILY TOTAL
                     let dailyTotalElement = null;
                     if (isNewDateGroup) {
                         const dailyTotal = filteredExpenses
@@ -1081,8 +1144,8 @@ const SapiFinanceApp = () => {
 
                         dailyTotalElement = (
                             <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
-                                <td colSpan="7" className="p-2 md:px-4">
-                                    <div className="flex justify-between items-center text-xs md:text-sm font-bold text-gray-600">
+                                <td colSpan="7" className="p-4">
+                                    <div className="flex justify-between items-center text-sm font-bold text-gray-600">
                                         <span>{dateLabel}</span>
                                         <span className={`${currentTheme.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
                                             Total: {formatRupiah(dailyTotal)}
@@ -1097,43 +1160,42 @@ const SapiFinanceApp = () => {
                     <React.Fragment key={row.id}>
                       {dailyTotalElement}
                       <tr className="hover:bg-gray-50 transition-colors group">
-                        <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
-                          <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
+                        <td className={`p-4 text-center text-gray-900 font-mono text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
+                        <td className={`p-2 ${currentTheme.table.cell[1]}`}>
+                          <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-sm text-gray-900`} />
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
-                          <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
+                        <td className={`p-2 ${currentTheme.table.cell[2]}`}>
+                          <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-sm text-gray-900 placeholder-gray-500`} />
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
+                        <td className={`p-2 ${currentTheme.table.cell[3]}`}>
                           <div className="flex flex-col items-center gap-0.5">
-                            <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
-                            <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[8px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
+                            <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-sm text-gray-900`} />
+                            <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
                           </div>
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
-                          <div className="flex gap-1 md:gap-2 items-center">
+                        <td className={`p-2 ${currentTheme.table.cell[4]}`}>
+                          <div className="flex gap-2 items-center">
                             {row.isCustomCategory && !viewArchiveData ? (
-                              <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
+                              <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-sm text-gray-900 placeholder-gray-300`} />
                             ) : (
-                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
+                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-sm text-gray-900 cursor-pointer appearance-none`}>
                                   <option value="">Pilih</option>
                                   {categories.map((cat) => (
                                     <option key={cat} value={cat}>{cat}</option>
                                   ))}
                               </select>
                             )}
-                            {/* Tombol Toggle Mode (Pensil / List) */}
-                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik kategori baru"}>
-                              {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
+                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik kategori baru"}>
+                              {row.isCustomCategory ? <List size={14} className="w-4 h-4" /> : <Edit2 size={14} className="w-4 h-4" />}
                             </button>
                           </div>
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[5]}`}>
-                          <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
+                        <td className={`p-2 ${currentTheme.table.cell[5]}`}>
+                          <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-sm text-gray-900`} />
                         </td>
-                        <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
+                        <td className={`p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
                           <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
-                            <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
+                            <Trash2 size={14} className="w-[18px] h-[18px]" />
                           </button>
                         </td>
                       </tr>
