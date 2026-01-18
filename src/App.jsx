@@ -750,10 +750,6 @@ const SapiFinanceApp = () => {
              const m = parseInt(mStr); // 1-indexed from key
              
              // Create safe date in LOCAL TIME for the start of that period
-             // Note: m is 1-12. Date() needs 0-11.
-             // If m is 1 (Jan), we want period start.
-             // If cutoff is 25, period "2026-01" starts Dec 25, 2025.
-             
              const periodStart = new Date(y, m - 1, cutoff);
              defaultDate = toLocalDateString(periodStart);
           }
@@ -1113,17 +1109,17 @@ const SapiFinanceApp = () => {
           </div>
            
           {/* RESPONSIVE TABLE VIEW (SCROLLABLE ON MOBILE) */}
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-left border-collapse table-fixed min-w-[600px] md:min-w-full">
+          <div className="w-full">
+            <table className="w-full text-left border-collapse table-fixed">
               <thead>
                 <tr className="text-gray-900 text-[10px] md:text-sm uppercase tracking-wider">
-                  <th className={`p-1 md:p-4 w-10 md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
-                   <th className={`p-1 md:p-4 w-24 md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
-                  <th className={`p-1 md:p-4 w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
-                  <th className={`p-1 md:p-4 w-16 md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
-                  <th className={`p-1 md:p-4 w-32 md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
-                   <th className={`p-1 md:p-4 w-24 md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
-                  <th className={`p-1 md:p-4 w-10 md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
+                  <th className={`p-0.5 md:p-4 w-[5%] md:w-12 text-center text-[8px] md:text-xs ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
+                   <th className={`p-0.5 md:p-4 w-[15%] md:w-28 text-[8px] md:text-xs ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
+                  <th className={`p-0.5 md:p-4 w-[25%] md:w-auto text-[8px] md:text-xs ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi</th>
+                  <th className={`p-0.5 md:p-4 w-[10%] md:w-20 text-center text-[8px] md:text-xs ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
+                  <th className={`p-0.5 md:p-4 w-[18%] md:w-44 text-[8px] md:text-xs ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
+                   <th className={`p-0.5 md:p-4 w-[18%] md:w-32 text-right text-[8px] md:text-xs ${currentTheme.table.header[5]} text-gray-900`}>Jumlah</th>
+                  <th className={`p-0.5 md:p-4 w-[9%] md:w-16 text-center text-[8px] md:text-xs ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1157,7 +1153,7 @@ const SapiFinanceApp = () => {
                         dailyTotalElement = (
                             <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
                                 <td colSpan="7" className="p-2 md:px-4">
-                                    <div className="flex justify-between items-center text-xs md:text-sm font-bold text-gray-600">
+                                    <div className="flex justify-between items-center text-[10px] md:text-sm font-bold text-gray-600">
                                         <span>{dateLabel}</span>
                                         <span className={`${currentTheme.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
                                             Total: {formatRupiah(dailyTotal)}
@@ -1172,25 +1168,25 @@ const SapiFinanceApp = () => {
                     <React.Fragment key={row.id}>
                       {dailyTotalElement}
                       <tr className="hover:bg-gray-50 transition-colors group">
-                        <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
-                          <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
+                        <td className={`p-0.5 md:p-4 text-center text-gray-900 font-mono text-[9px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
+                        <td className={`p-0.5 md:p-2 ${currentTheme.table.cell[1]}`}>
+                          <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-0 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[9px] md:text-sm text-gray-900`} />
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
-                          <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
+                        <td className={`p-0.5 md:p-2 ${currentTheme.table.cell[2]}`}>
+                          <input type="text" placeholder="Item..." value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-0 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[9px] md:text-sm text-gray-900 placeholder-gray-500`} />
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
+                        <td className={`p-0.5 md:p-2 ${currentTheme.table.cell[3]}`}>
                           <div className="flex flex-col items-center gap-0.5">
-                            <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
-                            <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[8px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
+                            <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-0 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[9px] md:text-sm text-gray-900`} />
+                            <input type="text" placeholder="pcs" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[7px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
                           </div>
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
+                        <td className={`p-0.5 md:p-2 ${currentTheme.table.cell[4]}`}>
                           <div className="flex gap-1 md:gap-2 items-center">
                             {row.isCustomCategory && !viewArchiveData ? (
-                              <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
+                              <input type="text" placeholder="..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-0 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[9px] md:text-sm text-gray-900 placeholder-gray-300`} />
                             ) : (
-                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
+                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-0 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[9px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
                                   <option value="">Pilih</option>
                                   {categories.map((cat) => (
                                     <option key={cat} value={cat}>{cat}</option>
@@ -1202,10 +1198,10 @@ const SapiFinanceApp = () => {
                             </button>
                           </div>
                         </td>
-                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[5]}`}>
-                          <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
+                        <td className={`p-0.5 md:p-2 ${currentTheme.table.cell[5]}`}>
+                          <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-0 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[9px] md:text-sm text-gray-900`} />
                         </td>
-                        <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
+                        <td className={`p-0.5 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
                           <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
                             <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
                           </button>
