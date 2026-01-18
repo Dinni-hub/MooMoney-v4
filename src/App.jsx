@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, LogOut, Upload, Menu, Settings } from 'lucide-react';
+import { Plus, Trash2, DollarSign, TrendingUp, Calculator, Edit2, List, Palette, PieChart, Wallet, Check, X, ChevronDown, AlertTriangle, FileText, Download, Calendar, Filter, XCircle, History, ArrowLeft, ArrowRightCircle, Upload, Menu, Settings } from 'lucide-react';
 
 // --- CUSTOM HOOK: LOCAL STORAGE SYNC ---
 const useLocalStorage = (key, initialValue) => {
@@ -376,7 +376,7 @@ const SapiFinanceApp = () => {
   const [showMonthAlert, setShowMonthAlert] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
+   
   const [viewArchiveData, setViewArchiveData] = useState(null);
   const [filterCategory, setFilterCategory] = useState(null);
   const [showManualMonthAlert, setShowManualMonthAlert] = useState(false);
@@ -405,7 +405,7 @@ const SapiFinanceApp = () => {
   };
 
   const { start: periodStart, end: periodEnd } = getActivePeriodRange();
-  
+   
   // SAFE HEADER LABEL
   let headerMonthLabel = "Loading...";
   try {
@@ -549,7 +549,7 @@ const SapiFinanceApp = () => {
     cowMessage = "Moo... Uang Mulai Menipis nih";
     speechBubbleClass = `${currentTheme.border} ${currentTheme.text} font-extrabold text-lg border-4`;
   }
-  
+   
   if (viewArchiveData) {
      cowMessage = `Arsip: ${viewArchiveData.period}`;
      appBg = 'bg-gray-100';
@@ -624,7 +624,7 @@ const SapiFinanceApp = () => {
   };
   const formatNumber = (num) => new Intl.NumberFormat('id-ID').format(num);
   const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-  
+   
   const smartParseItem = (id, text) => { 
     if (!text) return; 
     let newQty = null;
@@ -641,14 +641,14 @@ const SapiFinanceApp = () => {
     const updateLogic = row => { if (row.id === id) { return { ...row, item: newItemName, qty: newQty !== null ? newQty : row.qty, unit: newUnit !== null ? newUnit : row.unit }; } return row; };
     if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.map(updateLogic) }); } else { setExpenses(expenses.map(updateLogic)); }
   };
-  
+   
   const handleCategoryBudgetChange = (cat, value) => { 
       const cleanValue = value.replace(/\D/g, '');
       const val = cleanValue ? parseFloat(cleanValue) : 0;
       if (viewArchiveData) { updateArchive({ categoryBudgets: { ...viewArchiveData.categoryBudgets, [cat]: val } }); } 
       else { setCategoryBudgets(prev => ({ ...prev, [cat]: val })); }
   };
-  
+   
   const handleMainBudgetChange = (value) => { 
       const cleanValue = value.replace(/\D/g, '');
       const val = cleanValue ? parseFloat(cleanValue) : 0;
@@ -665,9 +665,9 @@ const SapiFinanceApp = () => {
       if (viewArchiveData) { const newCatBudgets = { ...viewArchiveData.categoryBudgets }; delete newCatBudgets[catName]; updateArchive({ categoryBudgets: newCatBudgets }); } 
       else { setVisibleBudgetCats(visibleBudgetCats.filter(c => c !== catName)); }
   };
-  
+   
   const handleToggleFilter = (cat) => { if (filterCategory === cat) { setFilterCategory(null); } else { setFilterCategory(cat); } };
-  
+   
   const handleAddCustomCategory = () => { 
     if (newCatName.trim()) {
         const name = newCatName.trim();
@@ -709,7 +709,12 @@ const SapiFinanceApp = () => {
       const today = new Date().toISOString().slice(0, 10);
       let defaultDate = today;
       if (targetList.length > 0) { const maxDate = targetList.reduce((max, p) => p.date > max ? p.date : max, targetList[0].date); defaultDate = maxDate; }
-      const newRow = { id: newId, date: defaultDate, item: '', category: 'Lainnya', amount: 0, qty: 1, unit: '-', isCustomCategory: false };
+      
+      // FIX: If filter is active, use filtered category
+      const initialCat = filterCategory ? filterCategory : 'Lainnya';
+      const isCustom = filterCategory ? true : false;
+
+      const newRow = { id: newId, date: defaultDate, item: '', category: initialCat, amount: 0, qty: 1, unit: '-', isCustomCategory: isCustom };
       if(viewArchiveData) { updateArchive({ expenses: [newRow, ...targetList] }); } else { setExpenses([newRow, ...targetList]); }
   };
   const handleDeleteRow = (id) => { if (viewArchiveData) { updateArchive({ expenses: viewArchiveData.expenses.filter(row => row.id !== id) }); } else { setExpenses(expenses.filter(row => row.id !== id)); } };
@@ -725,8 +730,8 @@ const SapiFinanceApp = () => {
   };
   const handleResetData = handleArchiveAndReset; 
   const handleKeepData = () => { setLastActiveMonth(getCurrentMonthISO()); setShowMonthAlert(false); };
-  const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat..."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
-  
+  const exportToExcel = async () => { if (!window.ExcelJS || !window.saveAs) { alert("Sistem Excel sedang dimuat... Pastikan internet nyala."); return; } const workbook = new window.ExcelJS.Workbook(); const worksheet = workbook.addWorksheet('Laporan'); const colorHex = currentTheme.hex.replace('#', ''); const argb = 'FF' + colorHex; const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; const whiteFont = { name: 'Arial', color: { argb: 'FFFFFFFF' }, bold: true }; const titleFont = { name: 'Arial', size: 16, bold: true, color: { argb: argb } }; worksheet.mergeCells('A1:G1'); const title = worksheet.getCell('A1'); title.value = `Laporan MooMoney - ${viewArchiveData ? viewArchiveData.period : headerMonthLabel}`; title.font = titleFont; title.alignment = { horizontal: 'center' }; worksheet.addRow([]); const sumRows = [['Total Pemasukan', activeBudget], ['Total Pengeluaran', totalExpenses], ['Sisa Saldo', balance]]; sumRows.forEach((d, i) => { const r = worksheet.addRow(['', d[0], d[1]]); r.getCell(3).numFmt = '"Rp"#,##0'; if(i===1) r.getCell(3).font = {color:{argb:'FFFF0000'}, bold:true}; if(i===2) r.getCell(3).font = {color:{argb:balance>=0?'FF008000':'FFFF0000'}, bold:true}; }); worksheet.addRow([]); const head = worksheet.addRow(['No', 'Tanggal', 'Deskripsi', 'Qty', 'Kategori', 'Jumlah']); head.eachCell(c => { c.fill=headerFill; c.font=whiteFont; }); activePeriodExpenses.forEach((item, idx) => { const r = worksheet.addRow([idx+1, item.date, item.item, `${item.qty} ${item.unit||''}`, item.category, item.amount]); r.getCell(6).numFmt = '"Rp"#,##0'; }); const buffer = await workbook.xlsx.writeBuffer(); const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); window.saveAs(blob, `MooMoney_Laporan.xlsx`); };
+   
   // FIX: MOBILE IMPORT LABEL
   const handleFileImport = (e) => {
     const file = e.target.files[0];
@@ -804,25 +809,25 @@ const SapiFinanceApp = () => {
     reader.readAsArrayBuffer(file);
     e.target.value = null;
   };
-  
+   
   const handleImportClick = () => { if (fileInputRef.current) { fileInputRef.current.click(); } };
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-500 pb-20 ${appBg}`}>
+    <div className={`min-h-screen font-sans transition-colors duration-500 pb-12 ${appBg}`}>
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} cutoffDay={cutoffDay} setCutoffDay={setCutoffDay} />
       <NewMonthModal isOpen={showMonthAlert} onClose={handleKeepData} onExport={exportToExcel} onReset={handleArchiveAndReset} monthName={new Date().toLocaleDateString('id-ID', { month: 'long' })} />
       <ManualMonthChangeModal isOpen={showManualMonthAlert} onClose={() => setShowManualMonthAlert(false)} onConfirm={handleConfirmManualSwitch} newMonthName={pendingMonth ? new Date(pendingMonth + "-01").toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : ''} />
       <SummaryModal isOpen={showSummary} onClose={() => setShowSummary(false)} totalBudget={activeBudget} totalExpenses={totalExpenses} balance={balance} theme={currentTheme} />
       <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} archives={archives} onLoadArchive={handleLoadArchive} onDeleteArchive={handleDeleteArchive} currentMonthLabel={headerMonthLabel} />
 
-      {/* Hidden File Input for Import - CRITICAL FIX FOR MOBILE: USE OPACITY 0 INSTEAD OF HIDDEN */}
+      {/* FIXED: Input File moved to top level to ensure accessibility */}
       <input 
         id="import-excel-input"
         type="file" 
         ref={fileInputRef} 
         onChange={handleFileImport} 
         accept=".xlsx, .xls" 
-        style={{ opacity: 0, position: 'absolute', zIndex: -1, width: 1, height: 1 }}
+        className="hidden" 
       />
 
       <div className={`w-full px-4 py-3 md:p-4 shadow-md transition-colors duration-300 ${headerBg} text-white sticky top-0 z-30`}>
@@ -833,7 +838,7 @@ const SapiFinanceApp = () => {
             </div>
             <div><h1 className="text-lg md:text-2xl font-bold tracking-wide leading-tight">MooMoney</h1><p className="text-[10px] md:text-xs opacity-90 font-medium">{viewArchiveData ? 'Arsip Laporan' : `Periode: ${headerMonthLabel}`}</p></div>
           </div>
-          
+           
           <div className="flex items-center gap-2">
             {viewArchiveData && ( <button onClick={handleBackToCurrent} className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 animate-pulse"> <ArrowLeft size={16} /> KEMBALI </button> )}
             
@@ -877,8 +882,8 @@ const SapiFinanceApp = () => {
                          <div className="flex flex-col gap-1">
                             <button onClick={() => { setShowSummary(true); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><FileText size={16}/> Laporan</button>
                             <button onClick={() => { exportToExcel(); setIsMobileMenuOpen(false); }} className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2"><Download size={16}/> Download Excel</button>
-                            {/* MOBILE IMPORT: USE LABEL FOR NATIVE FILE TRIGGER */}
-                            <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer"><Upload size={16}/> Import Excel</label>
+                            {/* FIX: Trigger label for native input file on mobile */}
+                            <label htmlFor="import-excel-input" className="px-3 py-2 text-left text-sm hover:bg-gray-100 rounded-lg flex items-center gap-2 cursor-pointer w-full"><Upload size={16}/> Import Excel</label>
                          </div>
                     </div>
                 )}
@@ -887,8 +892,7 @@ const SapiFinanceApp = () => {
           </div>
         </div>
       </div>
-      
-      {/* ... (Rest of the UI remains the same) ... */}
+       
       <div className="max-w-7xl mx-auto p-3 md:p-6 lg:p-8">
         {viewArchiveData && ( <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded shadow-sm"> <p className="font-bold flex items-center gap-2"><History size={18}/> Mode Arsip: {viewArchiveData.period}</p> <p className="text-xs">Data masa lalu (Dapat diedit).</p> </div> )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
@@ -898,7 +902,7 @@ const SapiFinanceApp = () => {
             <div className={`mt-2 md:mt-4 font-bold text-base md:text-lg ${cowMood === 'angry' ? 'text-red-600' : cowMood === 'warning' ? 'text-orange-600' : 'text-gray-700'}`}>Status: {cowMood === 'angry' ? 'BAHAYA' : cowMood === 'warning' ? 'WASPADA' : 'AMAN'}</div>
           </div>
           <div className="lg:col-span-2 flex flex-col gap-4">
-              <div className={`grid grid-cols-1 ${totalExpenses > 0 ? 'md:grid-cols-2' : ''} gap-4`}>
+             <div className={`grid grid-cols-1 ${totalExpenses > 0 ? 'md:grid-cols-2' : ''} gap-4`}>
               <div className={`bg-white rounded-2xl shadow-lg p-4 md:p-6 border-l-8 ${cardBorder} transition-colors flex flex-col justify-center`}>
                 <h2 className="text-gray-500 text-xs md:text-sm font-semibold uppercase tracking-wider mb-2">Target Budget Bulanan</h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
@@ -907,8 +911,8 @@ const SapiFinanceApp = () => {
                 </div>
               </div>
               
-              {/* Chart Always Visible */}
-               <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
+               {/* Chart Always Visible */}
+                <div className="bg-white rounded-2xl shadow-lg p-4 md:p-5 border-l-8 border-indigo-300 transition-colors flex flex-col justify-center">
                   <h3 className="text-gray-600 text-sm font-bold flex items-center gap-2 mb-3"> <PieChart size={16} className="text-indigo-400" /> Statistik Pengeluaran </h3>
                   {totalExpenses > 0 ? (
                   <div className="flex flex-row items-center gap-4 justify-between">
@@ -927,7 +931,7 @@ const SapiFinanceApp = () => {
                             </div> 
                             <span className="font-mono text-gray-500 font-bold">{formatRupiah(d.value)}</span>
                           </div>
-                          ))}
+                         ))}
                       </div>
                     </div>
                   </div>
@@ -989,7 +993,7 @@ const SapiFinanceApp = () => {
             
             {!viewArchiveData && (isAddingCat ? (
               <div className={`shadow-sm rounded-xl p-3 relative overflow-hidden border border-gray-100 border-l-4 ${currentTheme.border} bg-white flex flex-col justify-center min-h-[100px]`}>
-                 {isCreatingCustom ? (
+                  {isCreatingCustom ? (
                     <>
                          <p className="text-xs font-bold text-gray-500 mb-1">Nama Kategori Baru:</p>
                         <div className="flex gap-2 items-center">
@@ -998,7 +1002,7 @@ const SapiFinanceApp = () => {
                            <button onClick={() => setIsCreatingCustom(false)} className="text-red-400 hover:text-red-600 p-1"><X size={16} /></button>
                         </div>
                     </>
-                 ) : (
+                  ) : (
                     <>
                         <div className="flex justify-between items-center mb-2 pb-1 border-b border-gray-50"> <p className="text-xs font-bold text-gray-500">Pilih Kategori:</p> <button onClick={() => setIsAddingCat(false)} className="text-gray-400 hover:text-red-500"><X size={14} /></button> </div>
                         <div className="flex-1 overflow-y-auto max-h-[120px] custom-scrollbar pr-1">
@@ -1008,7 +1012,7 @@ const SapiFinanceApp = () => {
                            </div>
                         </div>
                     </>
-                 )}
+                  )}
               </div>
             ) : (
                <button onClick={() => setIsAddingCat(true)} className="border-2 border-dashed border-gray-300 rounded-xl p-3 flex flex-col items-center justify-center text-gray-400 hover:border-pink-400 hover:text-pink-500 transition-colors min-h-[100px]"> <Plus size={24} /> <span className="text-xs font-bold mt-1">Tambahkan Kategori</span> </button>
@@ -1026,180 +1030,120 @@ const SapiFinanceApp = () => {
               <span className="hidden sm:inline">Catatan Pengeluaran</span>
               {filterCategory && ( <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex items-center gap-1"> Filter: {filterCategory} <button onClick={() => setFilterCategory(null)}><XCircle size={12}/></button> </span> )}
               <span className="inline sm:hidden">Daftar</span>
-             </h3>
-             {/* --- FIX: TOMBOL TAMBAH BARIS KEMBALI MUNCUL DI HP --- */}
-             <button
-               onClick={handleAddRow}
-               className={`${currentTheme.bg} ${currentTheme.hover} text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-transform active:scale-95 z-10 relative`}
-             >
-               <Plus size={16} /> Tambah Baris
-             </button>
-           </div>
+            </h3>
+            {/* FIX: Use Type Button explicitly */}
+            <button type="button" onClick={handleAddRow} className={`${currentTheme.bg} ${currentTheme.hover} text-white px-2 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2 transition-colors shadow-md active:scale-95`}>
+              <Plus size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Tambah Baris</span><span className="inline sm:hidden">Tambah</span>
+            </button>
+          </div>
            
-           <div className="w-full">
-             {/* --- DESKTOP TABLE VIEW (MD UP) --- */}
-             <table className="w-full text-left border-collapse table-fixed hidden md:table">
-               <thead>
-                 <tr className="text-gray-900 text-[10px] md:text-sm uppercase tracking-wider">
-                   <th className={`p-1 md:p-4 w-[8%] md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
-                    <th className={`p-1 md:p-4 w-[19%] md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
-                   <th className={`p-1 md:p-4 w-[21%] md:w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
-                   <th className={`p-1 md:p-4 w-[10%] md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
-                   <th className={`p-1 md:p-4 w-[14%] md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
-                    <th className={`p-1 md:p-4 w-[20%] md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
-                   <th className={`p-1 md:p-4 w-[8%] md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100">
-                 {filteredExpenses.length === 0 ? (
-                   <tr>
-                     <td colSpan="7" className="p-8 text-center text-gray-400 italic text-sm">
-                       {filterCategory ? (
+          {/* FIX: Add overflow-x-auto wrapper for mobile table scrolling */}
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full table-fixed">
+              <thead>
+                <tr className="text-gray-900 text-[10px] md:text-sm uppercase tracking-wider">
+                  <th className={`p-1 md:p-4 w-10 md:w-12 text-center ${currentTheme.table.header[0]} text-white rounded-tl-xl`}>No</th>
+                   <th className={`p-1 md:p-4 w-24 md:w-28 ${currentTheme.table.header[1]} text-gray-900`}>Tanggal</th>
+                  <th className={`p-1 md:p-4 w-auto ${currentTheme.table.header[2]} text-gray-900`}>Deskripsi Item</th>
+                  <th className={`p-1 md:p-4 w-16 md:w-20 text-center ${currentTheme.table.header[3]} text-gray-900`}>Qty</th>
+                  <th className={`p-1 md:p-4 w-32 md:w-44 ${currentTheme.table.header[4]} text-gray-900`}>Kategori</th>
+                   <th className={`p-1 md:p-4 w-24 md:w-32 text-right ${currentTheme.table.header[5]} text-gray-900`}>Jumlah (Rp)</th>
+                  <th className={`p-1 md:p-4 w-10 md:w-16 text-center ${currentTheme.table.header[6]} text-gray-900 rounded-tr-xl`}>Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredExpenses.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="p-8 text-center text-gray-400 italic text-sm">
+                      {filterCategory ? (
                           `Belum ada pengeluaran di kategori ${filterCategory}`
-                       ) : (
+                      ) : (
                           <div className="flex flex-col items-center gap-3">
                             <p>Belum ada pengeluaran. Sapi senang! 🐮</p>
                             <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-table-happy" />
                           </div>
-                       )}
-                     </td>
-                   </tr>
-                 ) : (
-                   filteredExpenses.map((row, index) => {
-                     const isNewDateGroup = index === 0 || row.date !== filteredExpenses[index - 1].date;
-                     
-                     // CALCULATE DAILY TOTAL
-                     let dailyTotalElement = null;
-                     if (isNewDateGroup) {
-                         const dailyTotal = filteredExpenses
-                             .filter(e => e.date === row.date)
-                             .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-                         
-                         const dateObj = new Date(row.date);
-                         const dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredExpenses.map((row, index) => {
+                    const isNewDateGroup = index === 0 || row.date !== filteredExpenses[index - 1].date;
+                    
+                    // CALCULATE DAILY TOTAL
+                    let dailyTotalElement = null;
+                    if (isNewDateGroup) {
+                        const dailyTotal = filteredExpenses
+                            .filter(e => e.date === row.date)
+                            .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                        
+                        const dateObj = new Date(row.date);
+                        const dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-                         dailyTotalElement = (
-                             <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
-                                 <td colSpan="7" className="p-2 md:px-4">
-                                     <div className="flex justify-between items-center text-xs md:text-sm font-bold text-gray-600">
-                                         <span>{dateLabel}</span>
-                                         <span className={`${currentTheme.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
-                                             Total: {formatRupiah(dailyTotal)}
-                                         </span>
-                                     </div>
-                                 </td>
-                             </tr>
-                         );
-                     }
-
-                     return (
-                     <React.Fragment key={row.id}>
-                       {dailyTotalElement}
-                       <tr className="hover:bg-gray-50 transition-colors group">
-                         <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
-                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
-                           <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
-                         </td>
-                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
-                           <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
-                         </td>
-                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
-                           <div className="flex flex-col items-center gap-0.5">
-                             <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
-                             <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[8px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
-                           </div>
-                         </td>
-                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
-                           <div className="flex gap-1 md:gap-2 items-center">
-                             {row.isCustomCategory && !viewArchiveData ? (
-                               <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
-                             ) : (
-                               <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
-                                   <option value="">Pilih</option>
-                                   {categories.map((cat) => (
-                                     <option key={cat} value={cat}>{cat}</option>
-                                   ))}
-                               </select>
-                             )}
-                             {/* Tombol Toggle Mode (Pensil / List) */}
-                             <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik kategori baru"}>
-                               {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
-                             </button>
-                           </div>
-                         </td>
-                         <td className={`p-1 md:p-2 ${currentTheme.table.cell[5]}`}>
-                           <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
-                         </td>
-                         <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
-                           <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
-                             <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
-                           </button>
-                         </td>
-                       </tr>
-                     </React.Fragment>
-                     );
-                   })
-                 )}
-               </tbody>
-              </table>
-              
-              {/* --- MOBILE CARD VIEW (VISIBLE ON < MD) --- */}
-              <div className="block md:hidden bg-gray-50/50">
-                  {filteredExpenses.length === 0 && (
-                      <div className="p-8 text-center text-gray-400 italic text-sm flex flex-col items-center gap-3">
-                        <p>Belum ada pengeluaran. Sapi senang! 🐮</p>
-                        <CowAvatar mood="happy" className="w-20 h-20" uniqueId="empty-mobile-happy" />
-                      </div>
-                  )}
-                  {filteredExpenses.map((row, index) => {
-                       const isNewDateGroup = index === 0 || row.date !== filteredExpenses[index - 1].date;
-                       let dailyTotalElement = null;
-                        if (isNewDateGroup) {
-                            const dailyTotal = filteredExpenses.filter(e => e.date === row.date).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-                            const dateObj = new Date(row.date);
-                            const dateLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                            dailyTotalElement = (
-                                <div className="p-2 px-3 bg-gray-100 text-xs font-bold text-gray-600 flex justify-between items-center sticky top-14 z-20 shadow-sm">
-                                    <span>{dateLabel}</span>
-                                    <span className="bg-white px-2 py-0.5 rounded border">Total: {formatNumber(dailyTotal)}</span>
-                                </div>
-                            );
-                        }
-                        return (
-                            <React.Fragment key={row.id}>
-                                {dailyTotalElement}
-                                <div className="bg-white p-3 border-b border-gray-100">
-                                    <div className="flex justify-between gap-2 mb-2">
-                                        <div className="flex-1">
-                                            <label className="text-[10px] text-gray-400 font-bold uppercase">Deskripsi</label>
-                                            <input type="text" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} className="w-full font-bold text-gray-800 border-b border-dotted border-gray-300 focus:outline-none focus:border-pink-500 py-1" placeholder="Item..." />
-                                        </div>
-                                        <div className="w-1/3 text-right">
-                                            <label className="text-[10px] text-gray-400 font-bold uppercase">Rp</label>
-                                            <input type="text" inputMode="numeric" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} className="w-full font-bold text-gray-800 text-right border-b border-dotted border-gray-300 focus:outline-none focus:border-pink-500 py-1" placeholder="0" />
-                                        </div>
+                        dailyTotalElement = (
+                            <tr className="bg-gray-100/50 border-t-2 border-gray-200/50">
+                                <td colSpan="7" className="p-2 md:px-4">
+                                    <div className="flex justify-between items-center text-xs md:text-sm font-bold text-gray-600">
+                                        <span>{dateLabel}</span>
+                                        <span className={`${currentTheme.text} bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100`}>
+                                            Total: {formatRupiah(dailyTotal)}
+                                        </span>
                                     </div>
-                                    <div className="flex gap-2 items-center">
-                                         <div className="flex-1">
-                                             <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} className="w-full text-xs bg-gray-50 rounded p-1 border border-gray-200">
-                                                <option value="">Kategori...</option>
-                                                {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-                                             </select>
-                                         </div>
-                                         <div className="flex items-center gap-1 w-20">
-                                            <input type="number" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} className="w-8 text-center text-xs border-b border-gray-300 py-1" placeholder="1" />
-                                            <input type="text" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} className="w-10 text-center text-[10px] text-gray-500 border-none bg-transparent" placeholder="unit" />
-                                         </div>
-                                         <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} className="text-[10px] w-5 bg-transparent" />
-                                         <button onClick={() => handleDeleteRow(row.id)} className="text-red-400 p-2"><Trash2 size={16} /></button>
-                                    </div>
-                                </div>
-                            </React.Fragment>
-                        )
-                  })}
-              </div>
+                                </td>
+                            </tr>
+                        );
+                    }
 
-           </div>
+                    return (
+                    <React.Fragment key={row.id}>
+                      {dailyTotalElement}
+                      <tr className="hover:bg-gray-50 transition-colors group">
+                        <td className={`p-1 md:p-4 text-center text-gray-900 font-mono text-[10px] md:text-xs ${currentTheme.table.cell[0]}`}>{index + 1}</td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[1]}`}>
+                          <input type="date" value={row.date} onChange={(e) => handleChange(row.id, 'date', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900`} />
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[2]}`}>
+                          <input type="text" placeholder="Contoh: Duku" value={row.item} onChange={(e) => handleChange(row.id, 'item', e.target.value)} onBlur={(e) => smartParseItem(row.id, e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-medium text-[10px] md:text-sm text-gray-900 placeholder-gray-500`} />
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[3]}`}>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <input type="number" min="0.1" step="0.1" placeholder="1" value={row.qty} onChange={(e) => handleChange(row.id, 'qty', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 text-center rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono text-[10px] md:text-sm text-gray-900`} />
+                            <input type="text" placeholder="pcs/kg" value={row.unit || ''} onChange={(e) => handleChange(row.id, 'unit', e.target.value)} onKeyDown={handleKeyDown} className="w-full text-center bg-transparent text-[8px] md:text-xs text-gray-900 border-none p-0 focus:ring-0 hover:text-pink-800 focus:text-pink-900 placeholder-gray-600" />
+                          </div>
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[4]}`}>
+                          <div className="flex gap-1 md:gap-2 items-center">
+                            {row.isCustomCategory && !viewArchiveData ? (
+                              <input type="text" placeholder="Ketik..." value={row.category} autoFocus onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 placeholder-gray-300`} />
+                            ) : (
+                              <select value={row.category} onChange={(e) => handleChange(row.id, 'category', e.target.value)} onKeyDown={handleKeyDown} className={`w-full p-1 md:p-2 rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all text-[10px] md:text-sm text-gray-900 cursor-pointer appearance-none`}>
+                                  <option value="">Pilih</option>
+                                  {categories.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                              </select>
+                            )}
+                            {/* Tombol Toggle Mode (Pensil / List) */}
+                            <button onClick={() => toggleCategoryMode(row.id)} className={`hidden md:block p-1.5 md:p-2 rounded-full text-gray-800 hover:bg-white/40 transition-all flex-shrink-0`} title={row.isCustomCategory ? "Pilih dari daftar" : "Ketik kategori baru"}>
+                              {row.isCustomCategory ? <List size={14} className="md:w-4 md:h-4" /> : <Edit2 size={14} className="md:w-4 md:h-4" />}
+                            </button>
+                          </div>
+                        </td>
+                        <td className={`p-1 md:p-2 ${currentTheme.table.cell[5]}`}>
+                          <input type="text" inputMode="numeric" placeholder="0" value={row.amount === 0 ? '' : formatNumber(row.amount)} onChange={(e) => handleChange(row.id, 'amount', e.target.value)} onKeyDown={handleKeyDown} enterKeyHint="done" className={`w-full p-1 md:p-2 text-right rounded border border-transparent hover:border-gray-900/20 ${currentTheme.ring} focus:bg-white focus:outline-none bg-transparent transition-all font-mono font-medium text-[10px] md:text-sm text-gray-900`} />
+                        </td>
+                        <td className={`p-1 md:p-4 text-center ${currentTheme.table.cell[6]} rounded-br-xl`}>
+                          <button onClick={() => handleDeleteRow(row.id)} className="text-gray-900 hover:text-red-600 transition-colors p-1 rounded hover:bg-white/40" title="Hapus Baris">
+                            <Trash2 size={14} className="md:w-[18px] md:h-[18px]" />
+                          </button>
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+             </table>
+          </div>
         </div>
         
         {/* FOOTER: HATI */}
@@ -1208,7 +1152,6 @@ const SapiFinanceApp = () => {
         </div>
 
       </div>
-
     </div>
   );
 };
